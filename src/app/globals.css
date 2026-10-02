@@ -258,6 +258,52 @@ body {
   );
 }
 
+
+/**
+ * Which theme icon shows.
+ *
+ * Both icons are always in the DOM and CSS decides which is painted, rather than React
+ * holding a "current theme" that the server cannot know. That is what keeps the button
+ * from disagreeing with the page during hydration.
+ *
+ * The media-query arm is the "no explicit choice yet" case, guarded with `:not()` so a
+ * stored choice wins over the operating system; the two `[data-theme]` arms come after it
+ * and have the higher specificity, so they win either way.
+ *
+ * Note the specificity: `:root[data-theme="dark"] .theme-sun` is (0,2,1) against the base
+ * rule's (0,1,1), which is what lets it override. A bare `[data-theme] .theme-sun` would
+ * tie with the base and lose on order.
+ */
+.theme-sun {
+  display: block;
+}
+.theme-moon {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .theme-sun {
+    display: none;
+  }
+  :root:where(:not([data-theme="light"])) .theme-moon {
+    display: block;
+  }
+}
+
+:root[data-theme="dark"] .theme-sun {
+  display: none;
+}
+:root[data-theme="dark"] .theme-moon {
+  display: block;
+}
+
+:root[data-theme="light"] .theme-sun {
+  display: block;
+}
+:root[data-theme="light"] .theme-moon {
+  display: none;
+}
+
 /* A scrollbar that does not shout in the dark. */
 * {
   scrollbar-color: var(--axis) transparent;
