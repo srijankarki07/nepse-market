@@ -43,7 +43,7 @@ describe("dayChange", () => {
   });
 
   it("has no percentage against a zero baseline", () => {
-    // The change itself is knowable — 5 from nothing — but a percentage against nothing is
+    // The change itself is knowable, 5 from nothing, but a percentage against nothing is
     // not a number, and rendering it as one would invent a figure.
     const result = dayChange(5, 0);
     expect(result.change).toBe(5);

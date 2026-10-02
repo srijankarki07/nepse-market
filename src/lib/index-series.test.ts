@@ -102,7 +102,7 @@ describe("computeMarketIndex", () => {
   });
 
   it("reports no change for a single session", () => {
-    // Not zero — there is nothing to have changed from.
+    // Not zero, there is nothing to have changed from.
     expect(computeMarketIndex([flat]).changePercent).toBeNull();
   });
 

@@ -6,8 +6,8 @@
  * ## One series, no legend
  *
  * There is one line, so there is nothing to tell apart and a legend box would restate the
- * title. The colour carries direction — green when the period closed up, red when it
- * closed down — and that reading is duplicated in the heading above the chart, so the
+ * title. The colour carries direction, green when the period closed up, red when it
+ * closed down, and that reading is duplicated in the heading above the chart, so the
  * colour is never the only place the answer lives.
  *
  * ## Grid and axes are hairlines, not dashes
@@ -39,7 +39,7 @@ import { indexExtremes } from "@/lib/index-series";
 export function IndexChart({ index }: { index: MarketIndex }) {
   const { high, low } = indexExtremes(index);
 
-  // Direction over the period decides the hue. `null` — a single point — is neither, and
+  // Direction over the period decides the hue. `null`, a single point, is neither, and
   // gets the muted ink rather than a colour that would claim a move.
   const up = index.changePercent !== null && index.changePercent > 0;
   const flat = index.changePercent === null || index.changePercent === 0;
@@ -65,7 +65,7 @@ export function IndexChart({ index }: { index: MarketIndex }) {
         >
           <defs>
             <linearGradient id="index-fill" x1="0" y1="0" x2="0" y2="1">
-              {/* A wash, never a saturated block — the line is the data. */}
+              {/* A wash, never a saturated block: the line is the data. */}
               <stop offset="0%" stopColor={stroke} stopOpacity={0.16} />
               <stop offset="100%" stopColor={stroke} stopOpacity={0.01} />
             </linearGradient>
@@ -123,7 +123,7 @@ export function IndexChart({ index }: { index: MarketIndex }) {
           />
 
           {/* The extremes are labelled directly rather than left to the axis and the
-              tooltip — they are the two points a reader looks for first. */}
+              tooltip: they are the two points a reader looks for first. */}
           {high !== null && (
             <ReferenceDot
               x={high.date}

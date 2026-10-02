@@ -5,7 +5,7 @@
  *
  * ## Why the ticker is a query parameter and not a path segment
  *
- * `/symbol/NABIL` is the nicer URL and it is the obvious choice — right up until the site
+ * `/symbol/NABIL` is the nicer URL and it is the obvious choice, right up until the site
  * is statically exported, at which point a dynamic segment has to be enumerated at build
  * time. That would mean the build fetching the ticker list, so the build depends on the
  * archive being reachable, and a company listed this morning 404s until the next deploy.
@@ -16,7 +16,7 @@
  * ## The range is the reader's choice, because the cost is theirs
  *
  * A year is 230 session files. Cached they are free, but the first load of a long range
- * on a cold cache is seconds of fetching — so the default is deliberately short and the
+ * on a cold cache is seconds of fetching, so the default is deliberately short and the
  * longer ranges are a deliberate click rather than something every visitor pays for.
  */
 
@@ -171,7 +171,7 @@ function SymbolView() {
             )}
           </div>
 
-          {/* One control row above what it scopes — not a filter inside the card. */}
+          {/* One control row above what it scopes, never a filter inside the card. */}
           <div className="flex gap-1" role="group" aria-label="Chart range">
             {RANGES.map((option) => (
               <button

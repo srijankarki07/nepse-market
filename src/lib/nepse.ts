@@ -3,7 +3,7 @@
  *
  * ## One client for the whole app
  *
- * The client holds the cache — including a `localStorage` adapter, so a reload does not
+ * The client holds the cache, including a `localStorage` adapter, so a reload does not
  * refetch the session it just read. Session files never change, so that cache is not a
  * guess about freshness; it is a fact about the archive.
  *
@@ -21,7 +21,7 @@ import { createClient, localStorageCache, memoryCache, type NepseDataClient } fr
 
 let client: NepseDataClient | null = null;
 
-/** The shared client. Safe to call during prerender — it just will not persist. */
+/** The shared client. Safe to call during prerender, it just will not persist. */
 export function nepse(): NepseDataClient {
   client ??= createClient({
     // Falls back to memory where storage is unavailable, which includes the server during
@@ -35,8 +35,8 @@ export function nepse(): NepseDataClient {
 /**
  * The session-range options the symbol page offers.
  *
- * Deliberately short by default. A year is 230 session files — roughly a megabyte and a
- * few seconds cold — and the archive's data is end-of-day, so a chart of it is a
+ * Deliberately short by default. A year is 230 session files, roughly a megabyte and a
+ * few seconds cold (the archive's data is end-of-day), so a chart of it is a
  * long-horizon view rather than something anyone reads intraday.
  */
 export const RANGES = [

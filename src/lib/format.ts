@@ -4,7 +4,7 @@
  * ## An absent value is a dash, never a zero
  *
  * The archive writes a missing price as an empty field, and the client returns `null`.
- * Rendering that as `0` — or as `0.00`, which is what a naive formatter does — would turn
+ * Rendering that as `0`, or as `0.00`, which is what a naive formatter does, would turn
  * "this scrip did not trade" into "this scrip is worth nothing". The dash is the whole
  * point of the `null`, so it has to survive all the way to the screen.
  *
@@ -40,7 +40,7 @@ export function signed(value: number | null | undefined): string {
   return formatted;
 }
 
-/** A percentage, signed. `null` — an unknown baseline — becomes a dash. */
+/** A percentage, signed. `null`, an unknown baseline, becomes a dash. */
 export function percent(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   const formatted = Math.abs(value).toFixed(2);
@@ -53,8 +53,8 @@ export function percent(value: number | null | undefined): string {
  * Turnover, abbreviated.
  *
  * A day's turnover runs to nine figures, and a column of them is unreadable at full
- * width. The abbreviations are the ones a Nepali reader expects — lakh and crore, not
- * million and billion — because those are how the figures are discussed here.
+ * width. The abbreviations are the ones a Nepali reader expects, lakh and crore, not
+ * million and billion, because those are how the figures are discussed here.
  */
 export function turnover(value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";

@@ -8,8 +8,8 @@
  * This is the npm package's website, so the first thing it has to say is what the package
  * does. A screenshot of a dashboard says "here is a chart"; a code block beside the
  * dashboard it produces says "here is the code that made this", which is the actual
- * claim. The two are animated together — the calls resolve, the figures settle, the rows
- * fill in — so the relationship reads as cause and effect rather than as two pictures
+ * claim. The two are animated together, the calls resolve, the figures settle, the rows
+ * fill in, so the relationship reads as cause and effect rather than as two pictures
  * placed side by side.
  *
  * ## What is animated, and what is not
@@ -75,14 +75,20 @@ export function Hero({ market }: { market: Market }) {
   );
 
   // The busiest five, which is what a reader scanning a hero wants and what the package
-  // returns without a second request — the whole session is already in memory.
+  // returns without a second request, the whole session is already in memory.
   const busiest = [...market.rows]
     .sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))
     .slice(0, 5);
 
   return (
-    <section className="grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
-      <div className="flex flex-col justify-center space-y-5">
+    <section className="hero-wash grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
+      {/*
+        `min-w-0` is load-bearing. A grid child defaults to `min-width: auto`, which
+        means it refuses to shrink below its content, and the `<pre>` below is content
+        that does not wrap. Without this the whole page scrolls sideways on a phone,
+        which is what happened the first time.
+      */}
+      <div className="flex min-w-0 flex-col justify-center space-y-5">
         <p className="animate-fade text-xs font-medium tracking-wide text-[var(--muted)] uppercase">
           npm · nepse-data
         </p>
@@ -93,7 +99,7 @@ export function Hero({ market }: { market: Market }) {
 
         <p className="animate-rise max-w-prose text-base text-[var(--ink-2)] [animation-delay:60ms]">
           {count(market.sessionsInArchive)} sessions of end-of-day prices, served from a
-          public archive that maintains itself. No API key, no server, no rate limit —
+          public archive that maintains itself. No API key, no server, no rate limit,
           and no data in the package, so it is current the moment you run it.
         </p>
 
@@ -109,7 +115,7 @@ export function Hero({ market }: { market: Market }) {
           </Link>
         </div>
 
-        <pre className="animate-rise overflow-x-auto rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4 font-mono text-[13px] leading-relaxed [animation-delay:180ms]">
+        <pre className="animate-rise w-full min-w-0 overflow-x-auto rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4 font-mono text-[13px] leading-relaxed [animation-delay:180ms]">
           <code>
             {SNIPPET.map((token, index) => (
               <span key={index} className={toneClass(token.tone)}>
@@ -129,7 +135,7 @@ export function Hero({ market }: { market: Market }) {
         and the leftover becomes a bordered field of nothing under the last row, which
         reads as content that failed to load.
       */}
-      <div className="animate-fade flex flex-col gap-3 self-start rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-4 [animation-delay:220ms] sm:p-5">
+      <div className="animate-fade flex min-w-0 flex-col gap-3 self-start rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-4 [animation-delay:220ms] sm:p-5">
         <div className="flex items-baseline justify-between gap-3">
           <div>
             <p className="text-xs text-[var(--muted)]">Session</p>
@@ -177,7 +183,7 @@ export function Hero({ market }: { market: Market }) {
                   <td className="tabular px-3 py-2 text-right">{price(row.close)}</td>
                   {/*
                     The sign is always present. Colour is the second channel here, never
-                    the only one — which is what lets the green/red pair through, since a
+                    the only one, which is what lets the green/red pair through: a
                     reader who cannot separate the hues still reads + and −.
                   */}
                   <td className={`tabular px-3 py-2 text-right ${changeColor(row.change)}`}>

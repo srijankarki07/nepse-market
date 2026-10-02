@@ -14,7 +14,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "About this data — NEPSE",
+  title: "About this data | NEPSE",
   description:
     "Where these prices come from, what the derived index is, and what the data does not say.",
 };
@@ -33,7 +33,7 @@ export default function AboutPage() {
         <p>
           Every figure here is a <strong>closing price for a completed session</strong>,
           published roughly an hour after the exchange closes. There is no intraday data
-          and no live feed, and there cannot be one from this source — so nothing on this
+          and no live feed, and there cannot be one from this source, so nothing on this
           site is a current price. The date on every page is the session the archive holds,
           never today&apos;s date.
         </p>
@@ -69,14 +69,14 @@ export default function AboutPage() {
         <p>
           The chart on the front page is <strong>not NEPSE&apos;s index</strong>. The
           archive holds prices and volumes, not market capitalisation, so a
-          capitalisation-weighted index cannot be reproduced from it — and neither can the
+          capitalisation-weighted index cannot be reproduced from it, and neither can the
           exchange&apos;s basket definition.
         </p>
         <p>
           What is plotted is an <strong>equal-weighted</strong> index: the average of every
           scrip&apos;s day-on-day price change, chained forward from 100. It answers a real
-          question — what would an investor holding every listed scrip in equal amounts
-          have earned — and it is labelled as such everywhere it appears. It is not a
+          question, what would an investor holding every listed scrip in equal amounts
+          have earned. It is labelled as such everywhere it appears, and it is not a
           substitute for the exchange&apos;s own index and should not be quoted as one.
         </p>
       </Section>
@@ -85,7 +85,7 @@ export default function AboutPage() {
         <p>
           No adjustment is made for bonus shares, rights issues or splits. The source does
           not adjust them and neither does this site, so a long chart shows{" "}
-          <strong>nominal prices</strong> — a bonus issue appears as a sudden fall that no
+          <strong>nominal prices</strong>. A bonus issue appears as a sudden fall that no
           investor actually experienced. For anything requiring returns over a period
           containing a corporate action, this data needs adjusting first.
         </p>
@@ -96,14 +96,14 @@ export default function AboutPage() {
           A scrip that did not trade has no price, and the archive writes an empty field
           rather than a zero. That distinction is carried all the way to the screen: a
           dash means &quot;not published&quot;, and a zero would mean the scrip traded at
-          nothing. A day change is shown only when both closes are known — so a newly
+          nothing. A day change is shown only when both closes are known, so a newly
           listed scrip shows a dash rather than a rise measured from nothing.
         </p>
       </Section>
 
       <Section title="Licence">
         <p>
-          The code is MIT. <strong>The data is not covered by that licence</strong> — the
+          The code is MIT. <strong>The data is not covered by that licence</strong>. The
           prices are the exchange&apos;s, republished by a third party, and neither this
           site nor the package claims or grants any right over them.
         </p>
@@ -111,7 +111,7 @@ export default function AboutPage() {
 
       <Section title="What could go wrong">
         <p>
-          The archive is one person&apos;s pipeline. If it stops, prices stop arriving —
+          The archive is one person&apos;s pipeline. If it stops, prices stop arriving:
           the failure is visible here as sessions that simply stop advancing, and the
           archive is designed to fail loudly rather than write a bad file. The history
           before 2011 is not attempted, and the source&apos;s coverage is patchy in its

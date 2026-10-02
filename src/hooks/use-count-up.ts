@@ -5,7 +5,7 @@
  *
  * ## Why it exists at all
  *
- * The hero is making an argument — that this data arrives from a few lines of code — and
+ * The hero is making an argument: that this data arrives from a few lines of code, and
  * watching a figure settle is what makes that argument legible rather than merely
  * asserted. A table that is simply *there* reads as a screenshot; one that fills in reads
  * as something that ran.
@@ -21,7 +21,7 @@
  * The state starts at the target, so the server-rendered HTML carries the real figure and
  * a reader without JavaScript sees it. The effect then hands over to
  * `requestAnimationFrame`, and **the frame callback is the only thing that ever calls
- * `setValue`** — no `setState` runs synchronously inside the effect body. That is not
+ * `setValue`**. No `setState` runs synchronously inside the effect body. That is not
  * fussiness: a synchronous update there is a second render on every mount, which the
  * `set-state-in-effect` lint rule exists to catch, and it is why the reset to zero lives
  * in the first frame rather than above the loop.
@@ -29,7 +29,7 @@
  * ## Reduced motion never starts
  *
  * The effect returns before scheduling anything, so the value stays at the target from
- * the first paint — no flash of a counting figure for a reader who asked for no motion.
+ * the first paint, no flash of a counting figure for a reader who asked for no motion.
  */
 
 import { useEffect, useState } from "react";
@@ -44,7 +44,7 @@ function prefersReducedMotion(): boolean {
 export function useCountUp(target: number, options: { durationMs?: number } = {}): number {
   const duration = options.durationMs ?? DURATION_MS;
 
-  // Seeded with the target, so the first paint — and the server-rendered markup — is
+  // Seeded with the target, so the first paint, and the server-rendered markup, is
   // already correct. Only an animation ever moves it away from the truth.
   const [value, setValue] = useState(target);
 

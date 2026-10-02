@@ -3,7 +3,7 @@
  *
  * ## Why one is needed, and why this one is honest
  *
- * NEPSE publishes its own indices and the archive does not carry them — it is eight
+ * NEPSE publishes its own indices and the archive does not carry them, it is eight
  * columns of per-scrip prices and nothing else. But "how did the market move" is the
  * first question anyone asks of a market site, and it cannot be answered by pointing at
  * one scrip.

@@ -7,7 +7,7 @@
  *
  * Green-for-up and red-for-down is the market's convention and it is also the classic
  * accessibility trap: red and green are exactly what deuteranopia collapses. The
- * obvious pair — a bright green against a bright red — measures a colour-vision
+ * obvious pair , a bright green against a bright red, measures a colour-vision
  * separation of **ΔE 4.1**, far below the 8 needed and below even the 6–8 band that
  * secondary encoding can rescue.
  *
@@ -26,7 +26,7 @@
  * ## Blue is for magnitude, not direction
  *
  * The sequential ramp is the single-hue blue from the same system, used where the
- * question is "how much" rather than "which way" — archive coverage per year, for
+ * question is "how much" rather than "which way", archive coverage per year, for
  * instance. Directional charts use the up/down pair; there is no third case.
  */
 
@@ -206,6 +206,48 @@ body {
   .animate-draw {
     animation: none;
   }
+}
+
+/**
+ * The wash behind the hero.
+ *
+ * Two very low-opacity radials in the sequential blue and the up-green, so the top of the
+ * page has some depth without any of it reading as data. Deliberately far below the
+ * threshold at which a colour would look like it meant something: nothing here encodes a
+ * value, and a reader should never have to work out whether it does.
+ */
+.hero-wash {
+  position: relative;
+  isolation: isolate;
+}
+
+.hero-wash::before {
+  content: "";
+  position: absolute;
+  inset: -2rem -2rem auto -2rem;
+  height: 32rem;
+  z-index: -1;
+  pointer-events: none;
+
+  /*
+   * A linear wash rather than radial gradients, and that is the whole point.
+   *
+   * The first version used two radials. A radial is sized as a fraction of the element,
+   * so an ellipse centred at 90% with a 50% radius runs past the right edge, and where it
+   * runs past it is CLIPPED, leaving a rectangle with a hard border. That is what showed
+   * on the page. A linear gradient with stops inside 0-100% cannot be clipped, because it
+   * is already transparent everywhere the element ends.
+   *
+   * The mask then does the vertical fade, so the tint is gone long before the element's
+   * straight bottom edge can cut across it.
+   */
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--seq-4) 12%, transparent) 0%,
+    transparent 42%,
+    color-mix(in oklab, var(--up) 8%, transparent) 100%
+  );
+  mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 88%);
 }
 
 /* A scrollbar that does not shout in the dark. */

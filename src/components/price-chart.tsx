@@ -8,7 +8,7 @@
  * Recharts has none, and pulling in a second charting library for one chart is not worth
  * the weight. It is also the wrong shape for this data: end-of-day means every bar would
  * be a single tick wide, so a candlestick would be a line with a shadow. A close line over
- * a range band says the same thing and reads better — the band is the day's range, the
+ * a range band says the same thing and reads better, the band is the day's range, the
  * line is where it settled.
  *
  * ## The colour is the period's direction, and it is not the only place that is said
@@ -21,7 +21,7 @@
  *
  * The series holds only the sessions the scrip actually traded, and the x axis is
  * categorical: a scrip suspended for a month shows a gap in the points, never a plunge to
- * zero. `connectNulls` is off and there are no nulls to connect — the points simply do
+ * zero. `connectNulls` is off and there are no nulls to connect, the points simply do
  * not exist, which is the honest depiction of a market that was not open for it.
  */
 
@@ -123,13 +123,27 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
             }}
           />
 
-          {/* The day's range, as a wash. Saturated fills are for marks, not blocks. */}
+          {/* The day's range, as a flat wash sitting behind everything. */}
           <Area
             type="monotone"
             dataKey="range"
             stroke="none"
             fill="var(--muted)"
-            opacity={0.16}
+            opacity={0.14}
+            isAnimationActive={false}
+          />
+
+          {/*
+            The area under the close line, filled with the same gradient the home page's
+            index uses. Two reasons it is here rather than a flat tint: it ties the two
+            charts into one system, and the fade gives the line something to sit on: a
+            bare stroke over a range band reads as a wire crossing a smudge.
+          */}
+          <Area
+            type="monotone"
+            dataKey="close"
+            stroke="none"
+            fill="url(#price-fill)"
             isAnimationActive={false}
           />
 
@@ -206,7 +220,7 @@ export function PriceTable({ points }: { points: readonly SeriesPoint[] }) {
   );
 }
 
-/** The period's change, signed — the figures the chart's colour is restating. */
+/** The period's change, signed, the figures the chart's colour is restating. */
 export function SeriesChange({ points }: { points: readonly SeriesPoint[] }) {
   const first = points[0]?.close ?? null;
   const last = points.at(-1)?.close ?? null;

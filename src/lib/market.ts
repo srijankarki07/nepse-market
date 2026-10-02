@@ -3,8 +3,8 @@
  *
  * ## Why this is separate from the page
  *
- * It is the only piece of this site with a rule in it worth testing — how a day change is
- * decided — and a rule buried in a component is a rule nobody tests. The page fetches;
+ * It is the only piece of this site with a rule in it worth testing, how a day change is
+ * decided, and a rule buried in a component is a rule nobody tests. The page fetches;
  * this decides.
  *
  * ## A change is only a change when both sides are known
@@ -13,7 +13,7 @@
  * zero would be a lie the table tells:
  *
  *   - the previous session was not read, so there is no baseline;
- *   - the scrip did not trade in the previous session — newly listed, or suspended;
+ *   - the scrip did not trade in the previous session, newly listed, or suspended;
  *   - the previous close was itself zero, so a percentage against it is undefined.
  *
  * In each the table shows a dash. A day change of `0.00` means the price did not move,
@@ -38,7 +38,7 @@ export interface Market {
   rows: MarketRow[];
   /** Session count in the archive, from the index. */
   sessionsInArchive: number;
-  /** Sessions per year, from the index — what the coverage chart plots. */
+  /** Sessions per year, from the index, what the coverage chart plots. */
   years: Record<string, number>;
 }
 
@@ -87,13 +87,13 @@ export function buildMarket(
 /**
  * Everything the overview page needs, in four requests.
  *
- * The directory is fetched alongside rather than awaited first, because it is a nicety —
- * names — and the table is useful without it.
+ * The directory is fetched alongside rather than awaited first, because it is a nicety:
+ * names, and the table is useful without it.
  */
 export async function loadMarket(client: NepseDataClient): Promise<Market> {
   const manifest = await client.manifest();
   if (manifest.latest === null) {
-    throw new Error("The archive is empty — it holds no sessions yet.");
+    throw new Error("The archive is empty. It holds no sessions yet.");
   }
 
   const [current, previous, directory] = await Promise.all([

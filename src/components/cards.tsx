@@ -3,8 +3,17 @@
 /**
  * The pieces the bento grid is built from.
  *
- * Each is one question about the market with one answer, which is what a card in a grid
- * is for. Anything needing two answers is two cards.
+ * Each card answers one question about the market. Anything needing two answers is two
+ * cards, because a card that answers two questions is read as answering neither.
+ *
+ * ## Colour carries grouping, not decoration
+ *
+ * Most cards are monochrome on purpose: the figures are the point and a rainbow of
+ * accents would compete with them. Where colour does appear it says something:
+ * `accent` tints a card's rule by *what family of question it answers*, so the eye can
+ * sort the grid into market-wide, movers, and archive without reading a word. It is
+ * consistent within a family and never encodes a value, which is the line between a
+ * grouping cue and a chart that has lost its mind.
  */
 
 import Link from "next/link";
@@ -13,37 +22,50 @@ import type { ReactNode } from "react";
 import { changeColor, count, percent, signed } from "@/lib/format";
 import type { MarketRow } from "@/lib/market";
 
-/** The shared card shell: a title, an optional note, and the content. */
+/** Which family of question a card answers. Drives the accent, nothing else. */
+export type Accent = "market" | "up" | "down" | "archive" | "neutral";
+
+const ACCENT: Record<Accent, string> = {
+  market: "var(--seq-5)",
+  up: "var(--up)",
+  down: "var(--down)",
+  archive: "var(--seq-3)",
+  neutral: "var(--muted)",
+};
+
 export function Card({
   title,
   note,
-  children,
+  accent = "neutral",
   className = "",
+  children,
 }: {
   title: string;
   note?: string;
-  children: ReactNode;
+  accent?: Accent;
   className?: string;
+  children: ReactNode;
 }) {
   return (
     <section
-      className={`flex flex-col gap-3 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-4 ${className}`}
+      // The accent is a coloured edge across the top of the card rather than a dot or a
+      // chip: it marks the card's family at a glance from across the grid, costs no
+      // layout, and stays out of the way of the figures.
+      style={{ borderTopColor: ACCENT[accent], borderTopWidth: 3 }}
+      className={`flex flex-col gap-4 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5 ${className}`}
     >
-      <header className="flex items-baseline justify-between gap-2">
+      <header className="flex items-baseline gap-2.5">
         <h2 className="text-sm font-medium">{title}</h2>
-        {note !== undefined && <span className="text-xs text-[var(--muted)]">{note}</span>}
+        {note !== undefined && (
+          <span className="ml-auto text-xs text-[var(--muted)]">{note}</span>
+        )}
       </header>
-      {children}
+      <div className="flex flex-col gap-3">{children}</div>
     </section>
   );
 }
 
-/**
- * A list of scrips with one figure each.
- *
- * Rows are links, because the first thing a reader does with a name in a market list is
- * click it — and a card that shows a ticker it will not take you to is a dead end.
- */
+/** A list of scrips with one figure each. Rows link, because that is what a reader does. */
 export function ScripList({
   rows,
   figure,
@@ -60,7 +82,10 @@ export function ScripList({
   return (
     <ul className="divide-y divide-[var(--hairline)]">
       {rows.map((row) => (
-        <li key={row.symbol} className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0">
+        <li
+          key={row.symbol}
+          className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+        >
           <Link
             href={`/symbol/?t=${encodeURIComponent(row.symbol)}`}
             className="min-w-0 flex-1 hover:underline"
@@ -88,65 +113,143 @@ export function Change({ row }: { row: MarketRow }) {
 }
 
 /**
- * Advancing against declining, as a single split bar.
+ * Advancing, declining and unchanged, as a split bar over three labelled figures.
  *
- * A two-part bar rather than a pie: the question is "how lopsided", which a length
- * answers at a glance and an angle does not. The two segments are separated by a 2px gap
- * in the surface colour rather than by a stroke, and each side is labelled with its count
- * so the split is legible without relying on which colour is which.
+ * The three counts are the card's real content, the bar is what makes the *shape* of
+ * the day legible at a glance, and the numbers are what make it readable without relying
+ * on it. Colour never carries the meaning alone: each figure is labelled.
  */
-export function BreadthBar({ advancing, declining }: { advancing: number; declining: number }) {
-  const total = advancing + declining;
+export function Breadth({
+  advancing,
+  declining,
+  unchanged,
+  unknown,
+}: {
+  advancing: number;
+  declining: number;
+  unchanged: number;
+  unknown: number;
+}) {
+  const moved = advancing + declining;
+  const total = moved + unchanged;
 
   if (total === 0) {
     return <p className="py-6 text-center text-sm text-[var(--muted)]">No scrips moved.</p>;
   }
 
-  const advancingPercent = (advancing / total) * 100;
+  const advancingPercent = total === 0 ? 0 : (advancing / total) * 100;
+  const decliningPercent = total === 0 ? 0 : (declining / total) * 100;
+  const breadth = moved === 0 ? null : (advancing / moved) * 100;
 
   return (
-    <div className="space-y-2">
-      <div className="flex h-3 overflow-hidden rounded-full bg-[var(--grid)]">
+    <div className="space-y-4">
+      <div className="grid grid-cols-3 gap-3">
+        <Figure label="Advancing" value={advancing} tone="up" />
+        <Figure label="Declining" value={declining} tone="down" />
+        <Figure label="Unchanged" value={unchanged} tone="flat" />
+      </div>
+
+      <div className="flex h-3.5 overflow-hidden rounded-full bg-[var(--grid)]">
         <div className="bg-[var(--up)]" style={{ width: `${advancingPercent}%` }} />
-        {/* The gap is the surface showing through, not a border. */}
+        {/* The gap is the surface showing through, never a border. */}
         <div className="w-0.5 bg-[var(--surface)]" />
-        <div className="flex-1 bg-[var(--down)]" />
+        <div className="bg-[var(--down)]" style={{ width: `${decliningPercent}%` }} />
       </div>
-      <div className="flex justify-between text-xs">
-        <span className="text-[var(--ink-2)]">
-          <span className="font-medium text-[var(--ink)]">{count(advancing)}</span> advancing
-        </span>
-        <span className="text-[var(--ink-2)]">
-          <span className="font-medium text-[var(--ink)]">{count(declining)}</span> declining
-        </span>
-      </div>
+
+      {breadth !== null && (
+        <p className="text-xs text-[var(--ink-2)]">
+          <span className="font-medium text-[var(--ink)]">{percent(breadth - 50)}</span> breadth
+          across the {count(moved)} scrips that moved
+        </p>
+      )}
+
+      {unknown > 0 && (
+        <p className="text-xs text-[var(--muted)]">
+          {count(unknown)} show no change: they did not trade in the previous session, or it
+          predates them.
+        </p>
+      )}
     </div>
   );
 }
 
-/** Archive coverage: how many sessions each year holds. */
-export function CoverageBars({ years }: { years: Record<string, number> }) {
-  const entries = Object.entries(years).sort(([a], [b]) => a.localeCompare(b));
-  const max = Math.max(...entries.map(([, n]) => n), 1);
+function Figure({ label, value, tone }: { label: string; value: number; tone: "up" | "down" | "flat" }) {
+  const colour = tone === "up" ? "var(--up)" : tone === "down" ? "var(--down)" : "var(--flat)";
 
   return (
-    <div className="space-y-2">
-      <ul className="space-y-1">
-        {entries.map(([year, sessions]) => (
-          <li key={year} className="flex items-center gap-2 text-xs">
-            <span className="tabular w-10 shrink-0 text-[var(--muted)]">{year}</span>
-            {/*
-              A single hue, because this is magnitude — "how many" — not identity. A
-              value-ramp here would double-encode the length the bar already shows.
-            */}
-            <span
-              className="animate-wipe h-2 rounded-sm bg-[var(--seq-5)]"
-              style={{ width: `${(sessions / max) * 100}%` }}
-            />
-            <span className="tabular shrink-0 text-[var(--muted)]">{sessions}</span>
-          </li>
+    <div>
+      <p className="text-xs text-[var(--muted)]">{label}</p>
+      <p className="text-2xl font-semibold" style={{ color: colour }}>
+        {count(value)}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Archive coverage, as columns by year.
+ *
+ * Sixteen rows of horizontal bars was a list pretending to be a chart: too tall, too much
+ * text, and the two years that matter, 2015 and 2020, buried among fourteen that do not.
+ * Columns put the shape in one glance and leave room to mark the two dips, which are the
+ * only thing about this data anybody needs to be told.
+ *
+ * The colour is the sequential blue ramp, keyed to completeness rather than to the value
+ * the column already shows: a column at its full year's worth of sessions is solid, the
+ * current part-year is pale. That is a real distinction, "the year is not over", and not
+ * a restatement of the height.
+ */
+export function CoverageColumns({ years }: { years: Record<string, number> }) {
+  const entries = Object.entries(years).sort(([a], [b]) => a.localeCompare(b));
+  if (entries.length === 0) return null;
+
+  const counts = entries.map(([, n]) => n);
+  const max = Math.max(...counts);
+  // A full year in this archive runs a little over 240 sessions. Anything well short of
+  // that is either a part-year or one of the two closures, and both read pale.
+  const fullYear = Math.max(...counts);
+
+  // The two years the archive is short, which is the story worth annotating.
+  const notable = new Map<string, string>([
+    ["2015", "earthquake"],
+    ["2020", "COVID"],
+  ]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex h-32 items-end gap-1">
+        {entries.map(([year, sessions]) => {
+          const complete = sessions >= fullYear * 0.85;
+          const note = notable.get(year);
+
+          return (
+            <div key={year} className="group flex h-full flex-1 flex-col justify-end">
+              <div
+                className="w-full rounded-t-sm transition-opacity group-hover:opacity-80"
+                style={{
+                  height: `${(sessions / max) * 100}%`,
+                  background: complete ? "var(--seq-5)" : "var(--seq-2)",
+                }}
+                title={`${year}: ${sessions} sessions${note !== undefined ? ` (${note})` : ""}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* A year label every few columns, rather than sixteen overlapping ones. */}
+      <div className="flex gap-1 text-[10px] text-[var(--muted)]">
+        {entries.map(([year], index) => (
+          <span key={year} className="flex-1 text-center">
+            {index % 3 === 0 || index === entries.length - 1 ? year.slice(2) : ""}
+          </span>
         ))}
-      </ul>
+      </div>
+
+      <p className="text-xs text-[var(--ink-2)]">
+        2015 is short by the earthquake and 2020 by the COVID halt. The pale column is the
+        year still in progress.
+      </p>
     </div>
   );
 }

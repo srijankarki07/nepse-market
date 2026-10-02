@@ -9,7 +9,7 @@
  * caching a result the moment the user navigates back.
  *
  * `refetchOnWindowFocus` is off deliberately. The archive publishes once a day, so
- * refetching because somebody alt-tabbed would spend requests to learn nothing — the only
+ * refetching because somebody alt-tabbed would spend requests to learn nothing. The only
  * thing that changes the data is the data changing, and a reload picks that up.
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

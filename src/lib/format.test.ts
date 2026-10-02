@@ -5,7 +5,7 @@
  * exception is the treatment of `null`, which is not presentation at all: the archive
  * distinguishes "did not trade" from "traded at nothing", the client preserves that
  * distinction as `null`, and a formatter that renders it as `0.00` destroys it at the
- * last step — invisibly, and only for the scrips where it matters.
+ * last step, invisibly, and only for the scrips where it matters.
  */
 
 import { describe, expect, it } from "vitest";
@@ -93,7 +93,7 @@ describe("sessionDate", () => {
 
 describe("direction and colour", () => {
   it("treats an unknown change as neither up nor down", () => {
-    // Not "flat" — a colour is a claim, and there is nothing to claim.
+    // Not "flat": a colour is a claim, and there is nothing to claim.
     expect(direction(null)).toBe("flat");
     expect(direction(0)).toBe("flat");
     expect(direction(1)).toBe("up");
