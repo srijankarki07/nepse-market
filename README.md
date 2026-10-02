@@ -1,6 +1,6 @@
 # nepse-market
 
-A market browser for the Nepal Stock Exchange — every listed scrip, closing prices from
+A market browser for the Nepal Stock Exchange, every listed scrip, closing prices from
 2011 to today, read from a public archive in the browser.
 
 **End-of-day only.** There is no live or intraday data behind this, and there cannot be:
@@ -11,20 +11,20 @@ number as a current one.
 ## There is no server
 
 The data is static files on a CDN with CORS open, so the browser fetches it directly. This
-is a fully statically exported Next.js app — `pnpm build` emits plain files and any static
+is a fully statically exported Next.js app, `pnpm build` emits plain files and any static
 host serves them. Nothing is fetched at build time either, so the build works whether the
 archive is reachable or not, and a company listed this morning appears without a rebuild.
 
 ## What it shows
 
-- **`/`** — the latest session: 353 scrips with their day change, sortable and filterable,
+- **`/`**, the latest session: 353 scrips with their day change, sortable and filterable,
   plus turnover, volume and market breadth.
-- **`/symbol/?t=NABIL`** — one scrip: its price, the day's OHLC, a closing-price chart with
+- **`/symbol/?t=NABIL`**, one scrip: its price, the day's OHLC, a closing-price chart with
   the session high–low range banded behind it, over 1M / 3M / 6M / 1Y.
 
 The ticker is a query parameter rather than a path segment deliberately. `/symbol/NABIL`
 would be prettier, but a dynamic segment in a static export must be enumerated at build
-time — which would make the build depend on the network, and 404 a newly listed scrip until
+time, which would make the build depend on the network, and 404 a newly listed scrip until
 the next deploy. See the note at the top of `src/app/symbol/page.tsx`.
 
 ## Running it
@@ -57,5 +57,5 @@ appears as a sudden fall.
 
 ## Licence
 
-MIT for the code. The data is not covered by it — the prices are the exchange's, and this
+MIT for the code. The data is not covered by it, the prices are the exchange's, and this
 project neither owns nor re-licenses them.
