@@ -1,0 +1,70 @@
+name: CI
+
+# Nothing here reaches the network. The site fetches at runtime, so the tests never need
+# the archive and the build never does either — which means this is green whether the CDN
+# is having a good day or not.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The client is installed from a tarball built in its own repository, so this
+          # one cannot build without it. See the README.
+          path: nepse-market
+
+      - uses: actions/checkout@v4
+        with:
+          repository: srijankarki07/nepse-client
+          path: nepse-client
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Build the client
+        working-directory: nepse-client
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+          npm pack --pack-destination /tmp/pack
+
+      - name: Install
+        working-directory: nepse-market
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm add "file:/tmp/pack/nepse-data-0.1.0.tgz"
+
+      - name: Typecheck
+        working-directory: nepse-market
+        run: pnpm typecheck
+
+      - name: Lint
+        working-directory: nepse-market
+        run: pnpm lint
+
+      - name: Test
+        working-directory: nepse-market
+        run: pnpm test
+
+      # A static export is the deployment artefact, so a build that only passes locally is
+      # not a build that ships.
+      - name: Build the site
+        working-directory: nepse-market
+        run: pnpm build
