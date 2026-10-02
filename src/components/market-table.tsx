@@ -94,17 +94,17 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
           onChange={(event) => setFilter(event.target.value)}
           placeholder="Filter by ticker or company"
           aria-label="Filter the market by ticker or company name"
-          className="w-full max-w-xs rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none focus:border-neutral-500 dark:border-neutral-700 dark:bg-neutral-900"
+          className="w-full max-w-xs rounded-md border border-[var(--hairline)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--axis)]"
         />
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+        <p className="text-xs text-[var(--muted)]">
           {count(visible.length)} of {count(rows.length)} scrips
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="overflow-x-auto rounded-lg border border-[var(--hairline)] bg-[var(--surface)]">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-left dark:border-neutral-800">
+            <tr className="border-b border-[var(--hairline)] text-left">
               {COLUMNS.map((column) => (
                 <th
                   key={column.key}
@@ -117,10 +117,10 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
                   <button
                     type="button"
                     onClick={() => toggle(column.key)}
-                    className="inline-flex items-center gap-1 text-neutral-600 hover:text-neutral-900 dark:text-neutral-300 dark:hover:text-white"
+                    className="inline-flex items-center gap-1 text-[var(--ink-2)] hover:text-[var(--ink)]"
                   >
                     {column.label}
-                    <span aria-hidden className="text-[10px] text-neutral-400">
+                    <span aria-hidden className="text-[10px] text-[var(--muted)]">
                       {sortKey === column.key ? (descending ? "▼" : "▲") : ""}
                     </span>
                   </button>
@@ -132,7 +132,7 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
             {visible.map((row) => (
               <tr
                 key={row.symbol}
-                className="border-b border-neutral-100 last:border-0 hover:bg-neutral-50 dark:border-neutral-800/60 dark:hover:bg-neutral-800/40"
+                className="border-b border-[var(--hairline)] last:border-0 hover:bg-[var(--grid)]/40"
               >
                 <td className="px-3 py-2">
                   <Link
@@ -142,20 +142,20 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
                     {row.symbol}
                   </Link>
                   {row.name !== null && (
-                    <span className="block max-w-[18rem] truncate text-xs text-neutral-500 dark:text-neutral-400">
+                    <span className="block max-w-[18rem] truncate text-xs text-[var(--muted)]">
                       {row.name}
                     </span>
                   )}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">{price(row.close)}</td>
-                <td className={`px-3 py-2 text-right tabular-nums ${changeColor(row.change)}`}>
+                <td className="px-3 py-2 tabular text-right">{price(row.close)}</td>
+                <td className={`px-3 py-2 tabular text-right ${changeColor(row.change)}`}>
                   {signed(row.change)}
                   <span className="block text-xs opacity-80">{percent(row.changePercent)}</span>
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-600 dark:text-neutral-400">
+                <td className="px-3 py-2 tabular text-right text-[var(--ink-2)]">
                   {volume(row.volume)}
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums text-neutral-600 dark:text-neutral-400">
+                <td className="px-3 py-2 tabular text-right text-[var(--ink-2)]">
                   {turnover(row.turnover)}
                 </td>
               </tr>
@@ -164,7 +164,7 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
         </table>
 
         {visible.length === 0 && (
-          <p className="px-3 py-8 text-center text-sm text-neutral-500">
+          <p className="px-3 py-8 text-center text-sm text-[var(--muted)]">
             No scrip matches “{filter}”.
           </p>
         )}

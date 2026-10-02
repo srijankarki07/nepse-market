@@ -11,13 +11,12 @@
  * archive being reachable, and a company listed this morning 404s until the next deploy.
  *
  * `?t=NABIL` sidesteps all of it: one page, no build-time network, and a newly listed
- * scrip works the moment the archive publishes it. The URL is marginally less pretty and
- * the failure mode is gone.
+ * scrip works the moment the archive publishes it.
  *
  * ## The range is the reader's choice, because the cost is theirs
  *
  * A year is 230 session files. Cached they are free, but the first load of a long range
- * on a cold cache is seconds of fetching, so the default is deliberately short and the
+ * on a cold cache is seconds of fetching — so the default is deliberately short and the
  * longer ranges are a deliberate click rather than something every visitor pays for.
  */
 
@@ -26,7 +25,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
-import { PriceChart } from "@/components/price-chart";
+import { Card } from "@/components/cards";
+import { PriceChart, PriceTable, SeriesChange } from "@/components/price-chart";
 import { changeColor, count, percent, price, sessionDate, signed, turnover, volume } from "@/lib/format";
 import { toSeries } from "@/lib/market";
 import { RANGES, nepse, rangeStart, type RangeKey } from "@/lib/nepse";
@@ -34,7 +34,7 @@ import { RANGES, nepse, rangeStart, type RangeKey } from "@/lib/nepse";
 export default function SymbolPage() {
   // `useSearchParams` needs a boundary to prerender, which a static export does at build.
   return (
-    <Suspense fallback={<p className="text-sm text-neutral-500">Loading…</p>}>
+    <Suspense fallback={<p className="text-sm text-[var(--ink-2)]">Loading…</p>}>
       <SymbolView />
     </Suspense>
   );
@@ -74,23 +74,36 @@ function SymbolView() {
 
   if (symbol === "") {
     return (
-      <p className="text-sm text-neutral-600 dark:text-neutral-400">
-        No scrip named. <Link href="/" className="underline">Back to the market</Link>.
+      <p className="text-sm text-[var(--ink-2)]">
+        No scrip named.{" "}
+        <Link href="/" className="underline">
+          Back to the market
+        </Link>
+        .
       </p>
     );
   }
 
-  if (quote.isPending) return <p className="text-sm text-neutral-500">Reading {symbol}…</p>;
+  if (quote.isPending) {
+    return (
+      <div className="space-y-6" aria-busy="true" aria-live="polite">
+        <div className="h-8 w-48 animate-pulse rounded bg-[var(--grid)]" />
+        <div className="h-24 animate-pulse rounded-xl bg-[var(--grid)]" />
+        <div className="h-80 animate-pulse rounded-xl bg-[var(--grid)]" />
+        <p className="text-sm text-[var(--ink-2)]">Reading {symbol}…</p>
+      </div>
+    );
+  }
 
   if (quote.error) {
     return (
       <div className="space-y-3">
         <div
           role="alert"
-          className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+          className="rounded-lg border border-[var(--down)] bg-[var(--surface)] p-4 text-sm"
         >
           <p className="font-medium">{symbol} could not be priced.</p>
-          <p className="mt-1 opacity-90">{quote.error.message}</p>
+          <p className="mt-1 text-[var(--ink-2)]">{quote.error.message}</p>
         </div>
         <Link href="/" className="text-sm underline">
           Back to the market
@@ -104,7 +117,7 @@ function SymbolView() {
 
   return (
     <div className="space-y-6">
-      <nav className="text-xs text-neutral-500 dark:text-neutral-400">
+      <nav className="text-xs text-[var(--muted)]">
         <Link href="/" className="hover:underline">
           Market
         </Link>
@@ -114,33 +127,51 @@ function SymbolView() {
 
       <section className="space-y-1">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight">{entry.symbol}</h1>
-          <p className={`text-lg font-medium tabular-nums ${changeColor(entry.change)}`}>
+          <h1 className="text-3xl font-semibold tracking-tight">{entry.symbol}</h1>
+          <p className={`text-xl font-semibold ${changeColor(entry.change)}`}>
             {price(entry.quote.close)}
-            <span className="ml-2 text-sm">
+            <span className="ml-2 text-sm font-medium">
               {signed(entry.change)} ({percent(entry.changePercent)})
             </span>
           </p>
         </div>
-        {name.data != null && (
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">{name.data}</p>
-        )}
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+        {name.data != null && <p className="text-sm text-[var(--ink-2)]">{name.data}</p>}
+        <p className="text-xs text-[var(--muted)]">
           {sessionDate(entry.date)}
           {entry.previousClose !== null && <> · against {price(entry.previousClose)}</>}
         </p>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Open" value={price(entry.quote.open)} />
-        <Stat label="High" value={price(entry.quote.high)} />
-        <Stat label="Low" value={price(entry.quote.low)} />
-        <Stat label="Volume" value={volume(entry.quote.volume)} detail={turnover(entry.quote.turnover) + " turnover"} />
+      <section className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card title="Open">
+          <p className="tabular text-2xl font-semibold">{price(entry.quote.open)}</p>
+        </Card>
+        <Card title="High">
+          <p className="tabular text-2xl font-semibold">{price(entry.quote.high)}</p>
+        </Card>
+        <Card title="Low">
+          <p className="tabular text-2xl font-semibold">{price(entry.quote.low)}</p>
+        </Card>
+        <Card title="Volume" note={turnover(entry.quote.turnover) + " turnover"}>
+          <p className="tabular text-2xl font-semibold">{volume(entry.quote.volume)}</p>
+        </Card>
       </section>
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-neutral-600 dark:text-neutral-400">Closing price</h2>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Closing price</h2>
+            {points.length >= 2 && (
+              <p className="text-sm text-[var(--ink-2)]">
+                <SeriesChange points={points} />{" "}
+                <span className="text-[var(--muted)]">
+                  over {count(points.length)} sessions from {sessionDate(points[0]!.date)}
+                </span>
+              </p>
+            )}
+          </div>
+
+          {/* One control row above what it scopes — not a filter inside the card. */}
           <div className="flex gap-1" role="group" aria-label="Chart range">
             {RANGES.map((option) => (
               <button
@@ -150,8 +181,8 @@ function SymbolView() {
                 aria-pressed={option.key === rangeKey}
                 className={`rounded-md px-2.5 py-1 text-xs ${
                   option.key === rangeKey
-                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
-                    : "text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                    ? "bg-[var(--ink)] text-[var(--plane)]"
+                    : "text-[var(--ink-2)] hover:bg-[var(--grid)]"
                 }`}
               >
                 {option.label}
@@ -160,33 +191,23 @@ function SymbolView() {
           </div>
         </div>
 
-        {history.isPending ? (
-          <div className="h-80 animate-pulse rounded-lg bg-neutral-200 dark:bg-neutral-800" />
-        ) : history.error ? (
-          <p className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-            {history.error.message}
-          </p>
-        ) : (
-          <>
-            <PriceChart points={points} />
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              {count(points.length)} sessions{points.length > 0 && <> · {sessionDate(points[0]!.date)} to {sessionDate(points.at(-1)!.date)}</>}
-            </p>
-          </>
-        )}
+        <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-4">
+          {history.isPending ? (
+            <div className="h-80 animate-pulse rounded-lg bg-[var(--grid)]" />
+          ) : history.error ? (
+            <p className="py-8 text-center text-sm text-[var(--ink-2)]">{history.error.message}</p>
+          ) : (
+            <>
+              <PriceChart points={points} />
+              <PriceTable points={points} />
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                The band behind the line is each session&apos;s high–low range. Prices are
+                not adjusted for bonus shares, rights or splits.
+              </p>
+            </>
+          )}
+        </div>
       </section>
-    </div>
-  );
-}
-
-function Stat({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">{label}</p>
-      <p className="mt-1 text-lg font-semibold tabular-nums">{value}</p>
-      {detail !== undefined && (
-        <p className="text-xs text-neutral-400 dark:text-neutral-500">{detail}</p>
-      )}
     </div>
   );
 }

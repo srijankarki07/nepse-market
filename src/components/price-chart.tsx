@@ -1,20 +1,26 @@
 "use client";
 
 /**
- * A closing-price chart, with the session's high–low range behind it.
+ * A closing-price chart, with each session's high–low range banded behind it.
  *
  * ## Why there is no candlestick
  *
  * Recharts has none, and pulling in a second charting library for one chart is not worth
- * the weight. It is also a poor fit for this data: the archive is end-of-day, so every
- * bar would be a single point wide, and a candlestick of one tick is a line with a
- * shadow. A close line over a high–low band says the same thing and reads better at a
- * glance — the band is the day's range, the line is where it settled.
+ * the weight. It is also the wrong shape for this data: end-of-day means every bar would
+ * be a single tick wide, so a candlestick would be a line with a shadow. A close line over
+ * a range band says the same thing and reads better — the band is the day's range, the
+ * line is where it settled.
  *
- * ## Missing days leave gaps rather than zeroes
+ * ## The colour is the period's direction, and it is not the only place that is said
  *
- * The series holds only sessions the scrip actually traded, so the x axis is categorical:
- * a scrip suspended for a month shows a straight line across the gap, not a plunge to
+ * Green when the scrip closed the period up, red when it closed down, muted when it did
+ * not move. The heading above the chart states the same change in figures, signed, so a
+ * reader who cannot separate the two hues loses nothing.
+ *
+ * ## Missing sessions leave gaps, not zeroes
+ *
+ * The series holds only the sessions the scrip actually traded, and the x axis is
+ * categorical: a scrip suspended for a month shows a gap in the points, never a plunge to
  * zero. `connectNulls` is off and there are no nulls to connect — the points simply do
  * not exist, which is the honest depiction of a market that was not open for it.
  */
@@ -24,54 +30,78 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 
-import { price, sessionDate } from "@/lib/format";
+import { price, sessionDate, signed, percent } from "@/lib/format";
 import type { SeriesPoint } from "@/lib/market";
 
 export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
-  // Recharts wants a mutable array and a stable identity per point.
+  // Recharts wants its own array, and the range band needs both ends present.
   const data = points.map((point) => ({
     label: point.label,
     close: point.close,
-    // The band is drawn from a baseline to the high, then a second band downward to the
-    // low. Recharts' range Area takes a two-element dataKey for exactly this.
+    // A two-element key is how a range Area is expressed: baseline to high, then low.
     range: point.low === null || point.high === null ? null : [point.low, point.high],
   }));
 
   if (data.length < 2) {
     return (
-      <p className="rounded-lg border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900">
+      <p className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-8 text-center text-sm text-[var(--muted)]">
         Not enough sessions in this range to draw a chart.
       </p>
     );
   }
 
+  const first = points[0]?.close ?? null;
+  const last = points.at(-1)?.close ?? null;
+  const rose = first !== null && last !== null && last > first;
+  const fell = first !== null && last !== null && last < first;
+  const stroke = rose ? "var(--up)" : fell ? "var(--down)" : "var(--flat)";
+
+  const closes = points.map((point) => point.close).filter((value): value is number => value !== null);
+  const high = closes.length === 0 ? null : Math.max(...closes);
+  const low = closes.length === 0 ? null : Math.min(...closes);
+  const highPoint = points.find((point) => point.close === high) ?? null;
+  const lowPoint = points.find((point) => point.close === low) ?? null;
+
   return (
-    <div className="h-80 w-full rounded-lg border border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="currentColor" opacity={0.12} />
+        <ComposedChart data={data} margin={{ top: 12, right: 12, bottom: 4, left: 0 }}>
+          <defs>
+            <linearGradient id="price-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={stroke} stopOpacity={0.14} />
+              <stop offset="100%" stopColor={stroke} stopOpacity={0.01} />
+            </linearGradient>
+          </defs>
+
+          {/* Solid hairlines. Dashed gridlines read as a threshold or a projection when
+              they are only a grid. */}
+          <CartesianGrid stroke="var(--grid)" strokeWidth={1} vertical={false} />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 11 }}
+            tick={{ fontSize: 11, fill: "var(--muted)" }}
             tickFormatter={(value: string) => value.slice(5)}
-            minTickGap={40}
-            stroke="currentColor"
-            opacity={0.6}
+            minTickGap={44}
+            axisLine={{ stroke: "var(--axis)" }}
+            tickLine={false}
           />
           <YAxis
             domain={["auto", "auto"]}
-            tick={{ fontSize: 11 }}
-            width={64}
-            stroke="currentColor"
-            opacity={0.6}
+            tick={{ fontSize: 11, fill: "var(--muted)" }}
+            width={56}
+            tickFormatter={(value: number) => value.toFixed(0)}
+            axisLine={false}
+            tickLine={false}
           />
+
           <Tooltip
+            cursor={{ stroke: "var(--axis)", strokeWidth: 1 }}
             content={({ active, payload, label }) => {
               if (active !== true || payload === undefined || payload.length === 0) return null;
               const point = payload[0]?.payload as
@@ -80,11 +110,11 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
               if (point === undefined) return null;
 
               return (
-                <div className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-neutral-700 dark:bg-neutral-900">
+                <div className="rounded-md border border-[var(--hairline)] bg-[var(--surface)] px-3 py-2 text-xs shadow-sm">
                   <p className="font-medium">{sessionDate(String(label))}</p>
-                  <p className="tabular-nums">Close {price(point.close)}</p>
+                  <p className="tabular">Close {price(point.close)}</p>
                   {point.range !== null && (
-                    <p className="tabular-nums text-neutral-500 dark:text-neutral-400">
+                    <p className="tabular text-[var(--ink-2)]">
                       Range {price(point.range[0])} – {price(point.range[1])}
                     </p>
                   )}
@@ -92,24 +122,103 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
               );
             }}
           />
+
+          {/* The day's range, as a wash. Saturated fills are for marks, not blocks. */}
           <Area
             type="monotone"
             dataKey="range"
             stroke="none"
-            fill="currentColor"
-            opacity={0.12}
+            fill="var(--muted)"
+            opacity={0.16}
             isAnimationActive={false}
           />
+
           <Line
             type="monotone"
             dataKey="close"
-            stroke="#2563eb"
-            strokeWidth={1.75}
+            stroke={stroke}
+            strokeWidth={2}
             dot={false}
             isAnimationActive={false}
           />
+
+          {/* Labelled directly: these are the two points a reader looks for, and the
+              axis alone does not say when they happened. */}
+          {highPoint !== null && highPoint.close !== null && (
+            <ReferenceDot
+              x={highPoint.label}
+              y={highPoint.close}
+              r={4}
+              fill={stroke}
+              stroke="var(--surface)"
+              strokeWidth={2}
+            />
+          )}
+          {lowPoint !== null && lowPoint.close !== null && lowPoint.date !== highPoint?.date && (
+            <ReferenceDot
+              x={lowPoint.label}
+              y={lowPoint.close}
+              r={4}
+              fill={stroke}
+              stroke="var(--surface)"
+              strokeWidth={2}
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
+  );
+}
+
+/** The chart's table twin, so no value is reachable only by hovering. */
+export function PriceTable({ points }: { points: readonly SeriesPoint[] }) {
+  return (
+    <details className="text-sm">
+      <summary className="cursor-pointer text-xs text-[var(--muted)] hover:text-[var(--ink-2)]">
+        View as a table
+      </summary>
+      <div className="mt-2 max-h-64 overflow-y-auto rounded-md border border-[var(--hairline)]">
+        <table className="w-full">
+          <caption className="sr-only">Closing prices by session</caption>
+          <thead className="sticky top-0 bg-[var(--surface)]">
+            <tr className="border-b border-[var(--hairline)] text-left">
+              <th scope="col" className="px-3 py-1.5 font-medium">Session</th>
+              <th scope="col" className="px-3 py-1.5 text-right font-medium">Open</th>
+              <th scope="col" className="px-3 py-1.5 text-right font-medium">High</th>
+              <th scope="col" className="px-3 py-1.5 text-right font-medium">Low</th>
+              <th scope="col" className="px-3 py-1.5 text-right font-medium">Close</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...points].reverse().map((point) => (
+              <tr key={point.date} className="border-b border-[var(--hairline)] last:border-0">
+                <td className="px-3 py-1.5">{sessionDate(point.date)}</td>
+                <td className="tabular px-3 py-1.5 text-right">{price(point.open)}</td>
+                <td className="tabular px-3 py-1.5 text-right">{price(point.high)}</td>
+                <td className="tabular px-3 py-1.5 text-right">{price(point.low)}</td>
+                <td className="tabular px-3 py-1.5 text-right">{price(point.close)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
+/** The period's change, signed — the figures the chart's colour is restating. */
+export function SeriesChange({ points }: { points: readonly SeriesPoint[] }) {
+  const first = points[0]?.close ?? null;
+  const last = points.at(-1)?.close ?? null;
+  if (first === null || last === null || first === 0) return null;
+
+  const change = last - first;
+  const changePercent = (change / first) * 100;
+  const className = change > 0 ? "text-[var(--up)]" : change < 0 ? "text-[var(--down)]" : "text-[var(--flat)]";
+
+  return (
+    <span className={`tabular font-medium ${className}`}>
+      {signed(change)} ({percent(changePercent)})
+    </span>
   );
 }

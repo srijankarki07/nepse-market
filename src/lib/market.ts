@@ -38,6 +38,8 @@ export interface Market {
   rows: MarketRow[];
   /** Session count in the archive, from the index. */
   sessionsInArchive: number;
+  /** Sessions per year, from the index — what the coverage chart plots. */
+  years: Record<string, number>;
 }
 
 /** The day change between two closes, or `null` when either is missing. */
@@ -109,6 +111,7 @@ export async function loadMarket(client: NepseDataClient): Promise<Market> {
     previousDate: previous?.date ?? null,
     rows: buildMarket(current, previous, directory),
     sessionsInArchive: manifest.sessions,
+    years: manifest.years,
   };
 }
 
