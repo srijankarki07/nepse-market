@@ -24,7 +24,6 @@
 import {
   Area,
   AreaChart,
-  CartesianGrid,
   ReferenceDot,
   ResponsiveContainer,
   Tooltip,
@@ -71,7 +70,6 @@ export function IndexChart({ index }: { index: MarketIndex }) {
             </linearGradient>
           </defs>
 
-          <CartesianGrid stroke="var(--grid)" strokeWidth={1} vertical={false} />
           <XAxis
             dataKey="date"
             tick={{ fontSize: 11, fill: "var(--muted)" }}

@@ -27,7 +27,6 @@
 
 import {
   Area,
-  CartesianGrid,
   ComposedChart,
   Line,
   ReferenceDot,
@@ -82,7 +81,6 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
 
           {/* Solid hairlines. Dashed gridlines read as a threshold or a projection when
               they are only a grid. */}
-          <CartesianGrid stroke="var(--grid)" strokeWidth={1} vertical={false} />
           <XAxis
             dataKey="label"
             tick={{ fontSize: 11, fill: "var(--muted)" }}

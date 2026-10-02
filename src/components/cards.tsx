@@ -48,13 +48,17 @@ export function Card({
 }) {
   return (
     <section
-      // The accent is a coloured edge across the top of the card rather than a dot or a
-      // chip: it marks the card's family at a glance from across the grid, costs no
-      // layout, and stays out of the way of the figures.
-      style={{ borderTopColor: ACCENT[accent], borderTopWidth: 3 }}
       className={`flex flex-col gap-4 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5 ${className}`}
     >
       <header className="flex items-baseline gap-2.5">
+        {/* A short coloured rule beside the title, rather than an edge across the whole
+            card. A top border turns every card into a tab and makes the grid read as a
+            set of stripes; a mark this size groups the card without shouting. */}
+        <span
+          aria-hidden
+          className="h-3.5 w-1 shrink-0 self-center rounded-full"
+          style={{ background: ACCENT[accent] }}
+        />
         <h2 className="text-sm font-medium">{title}</h2>
         {note !== undefined && (
           <span className="ml-auto text-xs text-[var(--muted)]">{note}</span>
@@ -203,16 +207,15 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
   const entries = Object.entries(years).sort(([a], [b]) => a.localeCompare(b));
   if (entries.length === 0) return null;
 
-  const counts = entries.map(([, n]) => n);
-  const max = Math.max(...counts);
+  const max = Math.max(...entries.map(([, n]) => n));
+
   // A full year in this archive runs a little over 240 sessions. Anything well short of
   // that is either a part-year or one of the two closures, and both read pale.
-  const fullYear = Math.max(...counts);
+  const fullYear = max;
 
-  // The two years the archive is short, which is the story worth annotating.
   const notable = new Map<string, string>([
-    ["2015", "earthquake"],
-    ["2020", "COVID"],
+    ["2015", "the earthquake"],
+    ["2020", "the COVID halt"],
   ]);
 
   return (
@@ -223,15 +226,37 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
           const note = notable.get(year);
 
           return (
-            <div key={year} className="group flex h-full flex-1 flex-col justify-end">
+            // `group` plus a positioned child gives the tooltip without any state, and
+            // `tabIndex` on the column means the same information arrives on keyboard
+            // focus rather than only on hover.
+            <div
+              key={year}
+              className="group relative flex h-full flex-1 flex-col justify-end focus:outline-none"
+              tabIndex={0}
+              aria-label={`${year}: ${sessions} sessions${note === undefined ? "" : `, shortened by ${note}`}`}
+            >
               <div
-                className="w-full rounded-t-sm transition-opacity group-hover:opacity-80"
+                className="w-full rounded-t-sm transition-opacity group-hover:opacity-80 group-focus-visible:opacity-80"
                 style={{
                   height: `${(sessions / max) * 100}%`,
                   background: complete ? "var(--seq-5)" : "var(--seq-2)",
                 }}
-                title={`${year}: ${sessions} sessions${note !== undefined ? ` (${note})` : ""}`}
               />
+
+              {/* Hidden until hovered or focused, so it never occludes a neighbouring
+                  column, and `pointer-events-none` so it cannot swallow the hover. */}
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 rounded-md border border-[var(--hairline)] bg-[var(--surface)] px-2.5 py-1.5 text-xs whitespace-nowrap shadow-md group-hover:block group-focus-visible:block"
+              >
+                <span className="font-medium">{year}</span>
+                <span className="tabular text-[var(--ink-2)]">
+                  {sessions} session{sessions === 1 ? "" : "s"}
+                </span>
+                {note !== undefined && (
+                  <span className="block text-[var(--muted)]">short by {note}</span>
+                )}
+              </div>
             </div>
           );
         })}
@@ -250,6 +275,25 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
         2015 is short by the earthquake and 2020 by the COVID halt. The pale column is the
         year still in progress.
       </p>
+
+      {/* The table twin. The tooltip enhances the chart; this is what makes the values
+          reachable without a pointer, a hover, or the ability to separate the two blues. */}
+      <details className="text-xs">
+        <summary className="cursor-pointer text-[var(--muted)] hover:text-[var(--ink-2)]">
+          Sessions by year
+        </summary>
+        <div className="mt-2 grid grid-cols-2 gap-x-4">
+          {entries.map(([year, sessions]) => (
+            <div
+              key={year}
+              className="flex items-baseline justify-between gap-2 border-b border-[var(--hairline)] py-1"
+            >
+              <span className="text-[var(--ink-2)]">{year}</span>
+              <span className="tabular">{sessions}</span>
+            </div>
+          ))}
+        </div>
+      </details>
     </div>
   );
 }

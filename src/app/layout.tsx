@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 
 import { Providers } from "./providers";
+import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
 /**
@@ -40,6 +41,20 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/*
+          Runs before first paint, so a reader who chose dark never sees a white flash.
+          It has to be inline and render-blocking: a deferred script would run after the
+          browser has already painted the light theme.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              'try{var t=localStorage.getItem("nepse-theme");if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t}}catch(e){}',
+          }}
+        />
+      </head>
+
       <body className="flex min-h-full flex-col bg-[var(--plane)] text-[var(--ink)]">
         <header className="border-b border-[var(--hairline)] bg-[var(--surface)]">
           <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-4 sm:px-6">
@@ -54,13 +69,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <span className="text-xs text-[var(--muted)]">
               end-of-day closing prices, not a live feed
             </span>
-            <nav className="ml-auto flex gap-4 text-xs text-[var(--ink-2)]">
+            <nav className="ml-auto flex items-center gap-4 text-xs text-[var(--ink-2)]">
               <Link href="/" className="hover:underline">
                 Market
               </Link>
               <Link href="/about/" className="hover:underline">
                 About the data
               </Link>
+              <ThemeToggle />
             </nav>
           </div>
         </header>

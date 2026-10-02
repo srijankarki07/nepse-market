@@ -224,30 +224,38 @@ body {
 .hero-wash::before {
   content: "";
   position: absolute;
-  inset: -2rem -2rem auto -2rem;
-  height: 32rem;
+  inset: 0 -2rem auto -2rem;
+  height: 30rem;
   z-index: -1;
   pointer-events: none;
 
   /*
-   * A linear wash rather than radial gradients, and that is the whole point.
+   * The wash fades on all four edges, and it does so with ONE mask layer.
    *
-   * The first version used two radials. A radial is sized as a fraction of the element,
-   * so an ellipse centred at 90% with a 50% radius runs past the right edge, and where it
-   * runs past it is CLIPPED, leaving a rectangle with a hard border. That is what showed
-   * on the page. A linear gradient with stops inside 0-100% cannot be clipped, because it
-   * is already transparent everywhere the element ends.
+   * The vertical fade is in the background gradient itself, whose stops run transparent
+   * to transparent inside 0-100%. The horizontal fade is the mask. Splitting the two axes
+   * between the two properties is what avoids `mask-composite`, which forces an offscreen
+   * rasterisation and, measurably, slowed this page enough to stall a screenshot.
    *
-   * The mask then does the vertical fade, so the tint is gone long before the element's
-   * straight bottom edge can cut across it.
+   * An earlier attempt used two composited masks, and before that a 135deg gradient
+   * alone. That one ran corner to corner, so its colour reached the left and right edges
+   * at full strength and the element's straight sides cut it: the clipping that showed.
    */
   background: linear-gradient(
-    135deg,
-    color-mix(in oklab, var(--seq-4) 12%, transparent) 0%,
-    transparent 42%,
-    color-mix(in oklab, var(--up) 8%, transparent) 100%
+    to bottom,
+    transparent 0%,
+    color-mix(in oklab, var(--seq-4) 11%, transparent) 26%,
+    color-mix(in oklab, var(--up) 7%, transparent) 58%,
+    transparent 100%
   );
-  mask-image: linear-gradient(to bottom, black 0%, black 40%, transparent 88%);
+
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 16%,
+    black 82%,
+    transparent 100%
+  );
 }
 
 /* A scrollbar that does not shout in the dark. */
