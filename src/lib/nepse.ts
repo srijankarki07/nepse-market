@@ -17,7 +17,7 @@
  * queries miss and refetch while the symbol queries that have not changed stay cached.
  */
 
-import { createClient, localStorageCache, memoryCache, type NepseDataClient } from "nepse-data";
+import { createClient, localStorageCache, memoryCache, type NepseDataClient } from "@srijankarki44/nepse-data";
 
 let client: NepseDataClient | null = null;
 

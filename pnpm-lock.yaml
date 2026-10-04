@@ -8,12 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@srijankarki44/nepse-data':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.2.8)
-      nepse-data:
-        specifier: file:/tmp/pack/nepse-data-0.1.0.tgz
-        version: file:../../../../../../tmp/pack/nepse-data-0.1.0.tgz
       next:
         specifier: 16.3.8
         version: 16.3.8(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -641,6 +641,10 @@ packages:
 
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
+
+  '@srijankarki44/nepse-data@0.1.0':
+    resolution: {integrity: sha512-uA8J6D9UU1/T3ko3zgD6sdsQ+Azpf3UCDN7I/4w0104U2WxSW06QXwQxA/NwKzGBgO+fPFyQpSs+YFimbCtpeA==}
+    engines: {node: '>=20.11'}
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
@@ -2062,11 +2066,6 @@ packages:
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
-  nepse-data@file:../../../../../../tmp/pack/nepse-data-0.1.0.tgz:
-    resolution: {integrity: sha512-D5k7MsZZYOBm1Q4nquvUb3UHFZYy/PUp/bhIWcL4kL65QF1aoZZJKagBC1g6XtWydJhVywimSk4liu0zCwxfnQ==, tarball: file:../../../../../../tmp/pack/nepse-data-0.1.0.tgz}
-    version: 0.1.0
-    engines: {node: '>=20.11'}
-
   next@16.3.8:
     resolution: {integrity: sha512-U7QEZaTini6wKrb8A8hqLLqYQyCetegKjCpJOyxk642vWoMoU1x5PyZCJFvgYgiptA8xc5j/9xYlZFO7w9Sjmw==}
     engines: {node: '>=20.9.0'}
@@ -3173,6 +3172,8 @@ snapshots:
   '@rolldown/pluginutils@1.0.1': {}
 
   '@rtsao/scc@1.1.0': {}
+
+  '@srijankarki44/nepse-data@0.1.0': {}
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -4648,8 +4649,6 @@ snapshots:
   napi-postinstall@0.3.4: {}
 
   natural-compare@1.4.0: {}
-
-  nepse-data@file:../../../../../../tmp/pack/nepse-data-0.1.0.tgz: {}
 
   next@16.3.8(@babel/core@7.29.7)(@types/node@20.19.43)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:

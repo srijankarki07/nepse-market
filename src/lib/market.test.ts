@@ -7,12 +7,24 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { Quote, Session, SymbolDirectory } from "nepse-data";
+import type {
+  Quote,
+  Session,
+  SymbolDirectory,
+} from "@srijankarki44/nepse-data";
 
 import { buildMarket, dayChange, summarise } from "./market";
 
 function quote(symbol: string, close: number | null): Quote {
-  return { symbol, open: null, high: null, low: null, close, volume: null, turnover: null };
+  return {
+    symbol,
+    open: null,
+    high: null,
+    low: null,
+    close,
+    volume: null,
+    turnover: null,
+  };
 }
 
 function session(date: string, rows: Quote[]): Session {
@@ -21,7 +33,10 @@ function session(date: string, rows: Quote[]): Session {
 
 describe("dayChange", () => {
   it("computes a fall", () => {
-    expect(dayChange(566, 570)).toEqual({ change: -4, changePercent: expect.closeTo(-0.7018, 3) });
+    expect(dayChange(566, 570)).toEqual({
+      change: -4,
+      changePercent: expect.closeTo(-0.7018, 3),
+    });
   });
 
   it("computes a rise", () => {
@@ -93,7 +108,11 @@ describe("buildMarket", () => {
   });
 
   it("works with no previous session at all", () => {
-    const rows = buildMarket(session("2026-10-01", [quote("NABIL", 566)]), null, directory);
+    const rows = buildMarket(
+      session("2026-10-01", [quote("NABIL", 566)]),
+      null,
+      directory,
+    );
 
     expect(rows[0]?.change).toBeNull();
   });
@@ -119,7 +138,11 @@ describe("summarise", () => {
         { ...quote("B", 90), turnover: 200, volume: 20 },
         { ...quote("C", 100), turnover: 300, volume: 30 },
       ]),
-      session("2026-09-30", [quote("A", 100), quote("B", 100), quote("C", 100)]),
+      session("2026-09-30", [
+        quote("A", 100),
+        quote("B", 100),
+        quote("C", 100),
+      ]),
       {},
     );
 
@@ -139,7 +162,11 @@ describe("summarise", () => {
   it("counts an unknown change separately from an unchanged one", () => {
     // The bug this guards: folding unknowns into "unchanged" would make a market of
     // suspended scrips look perfectly flat.
-    const rows = buildMarket(session("2026-10-01", [quote("A", 100)]), null, {});
+    const rows = buildMarket(
+      session("2026-10-01", [quote("A", 100)]),
+      null,
+      {},
+    );
 
     const summary = summarise(rows);
 
@@ -149,7 +176,11 @@ describe("summarise", () => {
 
   it("treats a missing turnover as zero for the total, which it is", () => {
     // Unlike a price, a missing turnover genuinely contributes nothing to a sum.
-    const rows = buildMarket(session("2026-10-01", [quote("A", 100)]), null, {});
+    const rows = buildMarket(
+      session("2026-10-01", [quote("A", 100)]),
+      null,
+      {},
+    );
     expect(summarise(rows).turnover).toBe(0);
   });
 });

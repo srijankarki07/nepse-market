@@ -30,7 +30,7 @@
  * plateau.
  */
 
-import type { Session } from "nepse-data";
+import type { Session } from "@srijankarki44/nepse-data";
 
 export interface IndexPoint {
   date: string;

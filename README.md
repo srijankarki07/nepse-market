@@ -32,24 +32,36 @@ the next deploy. See the note at the top of `src/app/symbol/page.tsx`.
 ```bash
 pnpm install
 pnpm dev          # http://localhost:3000
-pnpm test         # 29 tests, no network
+pnpm test         # 41 tests, no network
 pnpm build        # static export to out/
 ```
 
-`nepse-data` is installed from a packed tarball rather than linked, because Turbopack will
-not follow a symlink outside the project root. To work on the client and the site
-together, repack and reinstall:
+`@srijankarki44/nepse-data` comes from npm, so a fresh clone installs and builds without
+the other repository.
+
+To test an *unpublished* change to the client against the site, install it from a packed
+tarball rather than a link, because Turbopack will not follow a symlink outside the project
+root:
 
 ```bash
-cd ../nepse-client && pnpm build && npm pack --pack-destination /tmp/pack
-cd ../nepse-market && pnpm add "file:/tmp/pack/nepse-data-0.1.0.tgz"
+cd ../nepse-client && pnpm build && npm pack --pack-destination scratch
+cd ../nepse-market && pnpm add "file:../nepse-client/scratch/srijankarki44-nepse-data-0.1.0.tgz"
+```
+
+That points at the client's gitignored `scratch/`, so it is a local override only: it
+breaks for anyone else and cannot resolve in CI. Put the registry version back before you
+push:
+
+```bash
+pnpm add @srijankarki44/nepse-data@^0.1.0
 ```
 
 ## Where the numbers come from
 
 [`srijankarki07/nepse-data`](https://github.com/srijankarki07/nepse-data) scrapes the
 exchange's end-of-day figures daily and commits one CSV per session. This site reads that
-through the `nepse-data` client, which handles the fetching, parsing and caching.
+through the `@srijankarki44/nepse-data` client, which handles the fetching, parsing and
+caching.
 
 Prices are **not adjusted** for bonus shares, rights issues or splits, because the source
 does not adjust them. A long chart therefore shows the nominal price, and a bonus issue

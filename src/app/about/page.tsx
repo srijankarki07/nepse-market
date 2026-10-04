@@ -58,7 +58,7 @@ export default function AboutPage() {
         <p>
           That repository is also what the{" "}
           <code className="rounded border border-[var(--hairline)] px-1 py-0.5 font-mono text-sm">
-            nepse-data
+            @srijankarki44/nepse-data
           </code>{" "}
           npm package reads. This site is a consumer of the package, not a thing apart from
           it.
