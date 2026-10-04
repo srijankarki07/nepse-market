@@ -13,10 +13,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { openGraphFor, twitterFor } from "@/lib/site";
+
+/**
+ * The title has no site name on the end: the root layout's `%s | NEPSE end-of-day`
+ * template adds it, and writing it here as well would produce it twice.
+ */
+const TITLE = "About this data";
+const DESCRIPTION =
+  "Where these prices come from, what the derived index is, and what the data does not say.";
+
 export const metadata: Metadata = {
-  title: "About this data | NEPSE",
-  description:
-    "Where these prices come from, what the derived index is, and what the data does not say.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/about/" },
+  openGraph: openGraphFor({ title: TITLE, description: DESCRIPTION, path: "/about/" }),
+  twitter: twitterFor({ title: TITLE, description: DESCRIPTION }),
 };
 
 export default function AboutPage() {

@@ -1,9 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 
 import { Providers } from "./providers";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_URL,
+  openGraphFor,
+  twitterFor,
+} from "@/lib/site";
 import "./globals.css";
 
 /**
@@ -29,10 +37,89 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/**
+ * The metadata every route inherits.
+ *
+ * ## The title is a default plus a template, not a string
+ *
+ * `default` is what a segment with no title of its own gets, which is the home page, so
+ * the home title is written once here rather than duplicated in `page.tsx`. `template`
+ * then suffixes every *other* page, so `about` only has to say "About this data" and the
+ * site name is not repeated in five files.
+ *
+ * The catch, and the reason the home page sets no title at all: a template applies to
+ * child segments, so a home page with its own `title` would render "…market data | NEPSE".
+ *
+ * ## `metadataBase` is what makes the relative URLs legal
+ *
+ * Every `url`, `canonical` and image path below is relative. Without `metadataBase` those
+ * are a build error, and with it they are resolved to absolute URLs against the one origin
+ * in `lib/site.ts`.
+ *
+ * ## `formatDetection` is not boilerplate here
+ *
+ * This site is almost entirely numbers, prices, and a phone that decides a run of digits
+ * is a telephone number will render it as a blue link. The three detections are off
+ * because there is nothing on any page that is an address, an email or a phone number.
+ */
 export const metadata: Metadata = {
-  title: "NEPSE end-of-day market data",
-  description:
-    "Closing prices for every scrip on the Nepal Stock Exchange, from 2011 to today, read from a public archive. End-of-day only: there is no live or intraday data here.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  category: "finance",
+  keywords: [
+    "NEPSE",
+    "Nepal Stock Exchange",
+    "NEPSE share price",
+    "Nepali share market",
+    "closing price",
+    "end-of-day data",
+    "share price history",
+    "NEPSE index",
+  ],
+  authors: [{ name: "Srijan Karki", url: "https://github.com/srijankarki07" }],
+  creator: "Srijan Karki",
+  publisher: "Srijan Karki",
+  formatDetection: { email: false, address: false, telephone: false },
+  openGraph: openGraphFor({
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    path: "/",
+  }),
+  twitter: twitterFor({ title: SITE_TITLE, description: SITE_DESCRIPTION }),
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      // The figures are the point, so a snippet is capped only by the page itself, and a
+      // large image preview is allowed because the share card is a real description of
+      // the site rather than a thumbnail of something else.
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
+};
+
+/**
+ * `themeColor` moved out of `metadata` in Next 14 and belongs here.
+ *
+ * Two values rather than one, because the site has a light and a dark plane and the
+ * browser chrome should sit on whichever the reader is looking at. The pair matches
+ * `--plane` in `globals.css`; a mismatch here is a visible seam above the header.
+ */
+export const viewport: Viewport = {
+  colorScheme: "light dark",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f9f9f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
+  ],
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -51,6 +138,30 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{
             __html:
               'try{var t=localStorage.getItem("nepse-theme");if(t==="light"||t==="dark"){document.documentElement.dataset.theme=t}}catch(e){}',
+          }}
+        />
+        {/*
+          What the site is, for a crawler that reads structured data rather than prose.
+
+          Kept to the claims this site can actually support. There is deliberately no
+          `publisher` and no `Organization`: this is one person's pipeline reading a third
+          party's archive, and naming an organisation here would invent one.
+
+          `<` is escaped because `JSON.stringify` does not, and an unescaped `<` inside a
+          script element is how a string in the data becomes markup on the page.
+        */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "WebSite",
+              name: SITE_NAME,
+              alternateName: "Nepal Stock Exchange end-of-day data",
+              url: `${SITE_URL}/`,
+              description: SITE_DESCRIPTION,
+              inLanguage: "en",
+            }).replace(/</g, "\\u003c"),
           }}
         />
       </head>
