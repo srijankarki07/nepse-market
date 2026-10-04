@@ -20,7 +20,7 @@
  * which is a different statement entirely.
  */
 
-import type { DatedQuote, NepseDataClient, Quote, Session, SymbolDirectory } from "nepse-data";
+import type { DatedQuote, NepseDataClient, Quote, Session, SymbolDirectory } from "@srijankarki44/nepse-data";
 
 export interface MarketRow extends Quote {
   /** The company name, when the archive has one. */

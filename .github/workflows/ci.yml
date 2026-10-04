@@ -6,7 +6,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
   workflow_dispatch:
 
@@ -19,15 +19,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          # The client is installed from a tarball built in its own repository, so this
-          # one cannot build without it. See the README.
-          path: nepse-market
-
-      - uses: actions/checkout@v4
-        with:
-          repository: srijankarki07/nepse-client
-          path: nepse-client
 
       - uses: pnpm/action-setup@v4
         with:
@@ -38,33 +29,22 @@ jobs:
           node-version: "22"
           cache: pnpm
 
-      - name: Build the client
-        working-directory: nepse-client
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm build
-          npm pack --pack-destination /tmp/pack
-
+      # The client comes from the registry, so this needs nothing from the other
+      # repository. Only the npm registry is reached, and `--frozen-lockfile` pins what
+      # that resolves to.
       - name: Install
-        working-directory: nepse-market
-        run: |
-          pnpm install --frozen-lockfile
-          pnpm add "file:/tmp/pack/nepse-data-0.1.0.tgz"
+        run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        working-directory: nepse-market
         run: pnpm typecheck
 
       - name: Lint
-        working-directory: nepse-market
         run: pnpm lint
 
       - name: Test
-        working-directory: nepse-market
         run: pnpm test
 
       # A static export is the deployment artefact, so a build that only passes locally is
       # not a build that ships.
       - name: Build the site
-        working-directory: nepse-market
         run: pnpm build

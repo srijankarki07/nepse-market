@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { Quote, Session } from "nepse-data";
+import type { Quote, Session } from "@srijankarki44/nepse-data";
 
 import { computeMarketIndex, indexExtremes, meanRatio } from "./index-series";
 

@@ -32,7 +32,7 @@ import { changeColor, count, percent, price, sessionDate, signed } from "@/lib/f
 import type { Market } from "@/lib/market";
 import { useCountUp } from "@/hooks/use-count-up";
 
-const INSTALL = "npm install nepse-data";
+const INSTALL = "npm install @srijankarki44/nepse-data";
 
 /** A line of the snippet, split into coloured runs. `tone` is absent on plain text. */
 type Token = { readonly text: string; readonly tone?: "kw" | "str" | "cm" };
@@ -41,7 +41,7 @@ const SNIPPET: readonly Token[] = [
   { text: "import", tone: "kw" },
   { text: " { createClient } " },
   { text: "from", tone: "kw" },
-  { text: ' "nepse-data"', tone: "str" },
+  { text: ' "@srijankarki44/nepse-data"', tone: "str" },
   { text: ";\n\n" },
   { text: "const", tone: "kw" },
   { text: " nepse = createClient();\n\n" },
@@ -90,7 +90,7 @@ export function Hero({ market }: { market: Market }) {
       */}
       <div className="flex min-w-0 flex-col justify-center space-y-5">
         <p className="animate-fade text-xs font-medium tracking-wide text-[var(--muted)] uppercase">
-          npm · nepse-data
+          npm · @srijankarki44/nepse-data
         </p>
 
         <h1 className="animate-rise text-4xl leading-[1.1] font-semibold tracking-tight sm:text-5xl">
