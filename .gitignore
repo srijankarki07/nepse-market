@@ -4,3 +4,7 @@ node_modules/
 *.tgz
 .playwright-mcp/
 *.tsbuildinfo
+
+# Design references: screenshots of other companies' products, kept to work from rather
+# than redistributed. Committing them would republish someone else's UI in a public repo.
+design-references/
