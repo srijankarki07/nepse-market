@@ -40,7 +40,7 @@ import { Hero } from "@/components/hero";
 import { Activity, Banknote, Grid, Layers } from "@/components/icons";
 import { IndexChart, IndexTable } from "@/components/index-chart";
 import { MarketTable } from "@/components/market-table";
-import { Segmented, SectionHeading, StatTile } from "@/components/ui";
+import { Segmented, SectionHeading, StatTile, type TrendPoint } from "@/components/ui";
 import { count, sessionDate, turnover, volume } from "@/lib/format";
 import { computeMarketIndex } from "@/lib/index-series";
 import { loadMarket, summarise } from "@/lib/market";
@@ -83,13 +83,15 @@ export function MarketView() {
       const to = market.data?.date;
       if (to === undefined) throw new Error("No session to measure from.");
 
+      // The dates come along, not just the closes: a sparkline a reader can hover needs to
+      // say which session a point belongs to, and a bare array of numbers cannot.
       const days = await nepse().closes({ from: rangeStart(to, TREND_DAYS), to });
-      const series = new Map<string, number[]>();
+      const series = new Map<string, TrendPoint[]>();
       for (const day of days) {
         for (const [symbol, close] of day.closes) {
           const points = series.get(symbol);
-          if (points === undefined) series.set(symbol, [close]);
-          else points.push(close);
+          if (points === undefined) series.set(symbol, [{ date: day.date, close }]);
+          else points.push({ date: day.date, close });
         }
       }
       return series;

@@ -23,9 +23,9 @@
  * it, and a screen reader gains nothing from being told about a polyline.
  */
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
-import { percent } from "@/lib/format";
+import { percent, price, sessionDate } from "@/lib/format";
 
 /* -------------------------------------------------------------------------- avatars */
 
@@ -108,46 +108,142 @@ export function sparkPath(
     .join(" ");
 }
 
+/**
+ * The index of the point nearest a pointer, or `-1` when there is nothing to point at.
+ *
+ * Exported and pure because it is the part of the hover that can be wrong in a way nobody
+ * notices: off by one and the tooltip reports the neighbouring day's price, which looks
+ * entirely plausible. The inverse of the x-mapping `sparkPath` draws with.
+ */
+export function nearestIndex(
+  count: number,
+  pointerX: number,
+  width: number,
+  padding = 1.5,
+): number {
+  if (count < 1) return -1;
+  if (count === 1) return 0;
+
+  const usable = width - padding * 2;
+  if (usable <= 0) return 0;
+
+  const ratio = (pointerX - padding) / usable;
+  return Math.max(0, Math.min(count - 1, Math.round(ratio * (count - 1))));
+}
+
+/** One point of a sparkline: a close, and the session it belongs to. */
+export interface TrendPoint {
+  readonly date: string;
+  readonly close: number;
+}
+
 export function Sparkline({
-  values,
+  symbol,
+  points,
   width = 76,
   height = 24,
   className = "",
 }: {
-  values: readonly number[];
+  symbol: string;
+  points: readonly TrendPoint[];
   width?: number;
   height?: number;
   className?: string;
 }) {
+  /*
+   * The hovered point lives here rather than in the table, and the tooltip is drawn from
+   * here too. A shared tooltip needed the pointer coordinates lifted into the table's state,
+   * and an element positioned inside a scroll container is clipped at the table's edges,
+   * which is why this one is `fixed` and positioned from the viewport.
+   */
+  const [active, setActive] = useState<number | null>(null);
+  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+
+  const values = points.map((point) => point.close);
   const path = sparkPath(values, width, height);
   if (path === "") return null;
 
-  const first = values.find((value) => Number.isFinite(value)) ?? 0;
-  const last = [...values].reverse().find((value) => Number.isFinite(value)) ?? 0;
-  // Coloured by where this line went, not by the day's change: a seven-day sparkline that
-  // fell is drawn falling even on a day the scrip rose.
-  const stroke = last > first ? "var(--up)" : last < first ? "var(--down)" : "var(--flat)";
+  const stroke =
+    values[values.length - 1]! > values[0]!
+      ? "var(--up)"
+      : values[values.length - 1]! < values[0]!
+        ? "var(--down)"
+        : "var(--flat)";
+
+  const hovered: TrendPoint | null = active === null ? null : (points[active] ?? null);
+
+  /** The x a point is drawn at, so the marker and the pointer agree. */
+  const xOf = (index: number) => 1.5 + (index * (width - 3)) / Math.max(1, points.length - 1);
 
   return (
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${width} ${height}`}
-      aria-hidden="true"
-      focusable="false"
-      className={className}
-    >
-      <path
-        d={path}
-        fill="none"
-        stroke={stroke}
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        vectorEffect="non-scaling-stroke"
-      />
-    </svg>
+    <span className={`relative inline-flex ${className}`}>
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        role="img"
+        aria-label={`Trend from ${points[0]?.close ?? 0} to ${values[values.length - 1] ?? 0}`}
+        onPointerMove={(event) => {
+          const box = event.currentTarget.getBoundingClientRect();
+          // Scaled, because the SVG is drawn at its viewBox size but can be laid out at
+          // another width by the browser.
+          const scale = width / box.width;
+          const index = nearestIndex(points.length, (event.clientX - box.left) * scale, width);
+
+          // Only when the day changes. A tooltip that re-rendered on every pixel of pointer
+          // movement would be a state update per frame for no visible gain.
+          if (index !== active) {
+            setActive(index);
+            setAnchor({ x: event.clientX, y: box.top });
+          }
+        }}
+        onPointerLeave={() => {
+          setActive(null);
+          setAnchor(null);
+        }}
+      >
+        <path
+          d={path}
+          fill="none"
+          stroke={stroke}
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+        {hovered !== null && active !== null && (
+          <circle
+            cx={xOf(active)}
+            cy={yOfPoint(values, active, height)}
+            r={2.5}
+            fill={stroke}
+            stroke="var(--surface)"
+            strokeWidth={1.5}
+          />
+        )}
+      </svg>
+
+      {hovered !== null && anchor !== null && (
+        <span
+          className="tabular pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-[135%] rounded-md border border-[var(--hairline)] bg-[var(--surface)] px-2 py-1 text-[11px] font-normal whitespace-nowrap"
+          style={{ left: anchor.x, top: anchor.y }}
+        >
+          <span className="font-mono font-semibold">{symbol}</span>{" "}
+          <span className="text-[var(--muted)]">{sessionDate(hovered.date)}</span>{" "}
+          <span className="font-medium">{price(hovered.close)}</span>
+        </span>
+      )}
+    </span>
   );
+}
+
+/** The y a point is drawn at. Shared by the path and the hover marker so they cannot drift. */
+function yOfPoint(values: readonly number[], index: number, height: number, padding = 1.5): number {
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const span = high - low;
+  const ratio = span === 0 ? 0.5 : ((values[index] ?? low) - low) / span;
+  return padding + (1 - ratio) * (height - padding * 2);
 }
 
 /* ---------------------------------------------------------------------------- chips */

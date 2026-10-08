@@ -30,7 +30,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Search } from "@/components/icons";
-import { Avatar, Chip, Sparkline } from "@/components/ui";
+import { Avatar, Chip, Sparkline, type TrendPoint } from "@/components/ui";
 import { count, turnover, volume } from "@/lib/format";
 import type { MarketRow } from "@/lib/market";
 
@@ -56,7 +56,7 @@ export function MarketTable({
   trends,
 }: {
   rows: readonly MarketRow[];
-  trends?: ReadonlyMap<string, readonly number[]>;
+  trends?: ReadonlyMap<string, readonly TrendPoint[]>;
 }) {
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("turnover");
@@ -217,7 +217,7 @@ export function MarketTable({
                 {trends !== undefined && (
                   <td className="px-4 py-3">
                     <div className="flex justify-end">
-                      <Sparkline values={trends.get(row.symbol) ?? []} />
+                      <Sparkline symbol={row.symbol} points={trends.get(row.symbol) ?? []} />
                     </div>
                   </td>
                 )}
