@@ -145,7 +145,12 @@ export function MarketTable({
             }}
             placeholder="Filter by ticker or company"
             aria-label="Filter the market by ticker or company name"
-            className="w-full rounded-md border border-[var(--hairline)] bg-[var(--surface)] py-2 pr-3 pl-9 text-sm outline-none focus:border-[var(--accent)]"
+            // No `outline-none` and no focus border of its own: the global `:focus-visible`
+            // rule in globals.css is this site's one focus indicator. A second one here
+            // would be a second convention, which is what the audit turned up in the first
+            // place. The utility would also have been dead code, since Tailwind's utilities
+            // sit in a cascade layer and lose to an unlayered rule whatever the order.
+            className="w-full rounded-md border border-[var(--hairline)] bg-[var(--surface)] py-2 pr-3 pl-9 text-sm"
           />
         </div>
         <p className="text-xs text-[var(--muted)]">

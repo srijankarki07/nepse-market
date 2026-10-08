@@ -6,8 +6,16 @@
  * from, what has been done to them, and what has not.
  *
  * It is also where the uncomfortable parts are said plainly rather than left for somebody
- * to discover: the archive is one person's pipeline, the index is derived rather than the
- * exchange's, and the prices are not adjusted.
+ * to discover: the archive is one person's pipeline, the equal-weighted index is derived
+ * rather than the exchange's, and the prices are not adjusted.
+ *
+ * ## The page carries two indices, and the difference is a whole section
+ *
+ * It used to carry one, and the section explaining it was three sentences. Since the
+ * exchange's own levels arrived there are two things on this site that a reader could
+ * reasonably call "the index", they are not interchangeable, and they are on the same
+ * screen. So the section compares them in a table rather than describing one and leaving
+ * the other to be inferred.
  */
 
 import type { Metadata } from "next";
@@ -21,7 +29,7 @@ import { openGraphFor, twitterFor } from "@/lib/site";
  */
 const TITLE = "About this data";
 const DESCRIPTION =
-  "Where these prices come from, what the derived index is, and what the data does not say.";
+  "Where these prices come from, what the two indices are, and what the data does not say.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -31,10 +39,42 @@ export const metadata: Metadata = {
   twitter: twitterFor({ title: TITLE, description: DESCRIPTION }),
 };
 
+/**
+ * The two things this site calls an index, asked the same five questions.
+ *
+ * Two lists of pairs rather than one list of three-column rows, because the two panels
+ * stack on a phone: a three-column table here would either scroll sideways, which this
+ * site avoids on purpose, or crush the column that carries the actual explanation.
+ */
+const COMPUTED_ROWS = [
+  ["What it is", "The mean of every scrip's day-on-day change, chained forward from 100."],
+  ["Where it comes from", "Arithmetic done on this site, from the archive's closing prices."],
+  ["Is it NEPSE's?", "No. A different measure that happens to be drawn the same way."],
+  ["How far back", "Every session in the archive, to 2011."],
+  ["Where you see it", "The chart under Market pulse."],
+] as const;
+
+const EXCHANGE_ROWS = [
+  [
+    "What it is",
+    "One of the exchange's published levels, weighted by market capitalisation.",
+  ],
+  [
+    "Where it comes from",
+    "Read from the exchange and republished by the archive. Not computed here.",
+  ],
+  ["Is it NEPSE's?", "Yes. These are the exchange's own figures."],
+  ["How far back", "From October 2026, when the archive began recording them."],
+  ["Where you see it", "The Major indices rail."],
+] as const;
+
 export default function AboutPage() {
   return (
-    <article className="mx-auto max-w-2xl space-y-8 py-4">
-      <header className="space-y-2">
+    <article className="mx-auto max-w-2xl space-y-10 py-4">
+      <header className="space-y-3">
+        <p className="text-[11px] font-medium tracking-wide text-[var(--muted)] uppercase">
+          About
+        </p>
         <h1 className="text-3xl font-semibold tracking-tight">About this data</h1>
         <p className="text-[var(--ink-2)]">
           Where the numbers come from, what has been done to them, and what they do not say.
@@ -77,19 +117,42 @@ export default function AboutPage() {
         </p>
       </Section>
 
-      <Section title="The index is derived, not the exchange's">
+      <Section title="There are two indices here, and they are not the same thing">
         <p>
-          The chart on the front page is <strong>not NEPSE&apos;s index</strong>. The
-          archive holds prices and volumes, not market capitalisation, so a
-          capitalisation-weighted index cannot be reproduced from it, and neither can the
-          exchange&apos;s basket definition.
+          Both are called &ldquo;the index&rdquo; by somebody, they appear within a screen of
+          each other, and confusing them is the easiest mistake to make on this site. So:
+        </p>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <IndexPanel
+            title="Equal-weighted"
+            note="computed on this site"
+            accent="var(--accent)"
+            rows={COMPUTED_ROWS}
+          />
+          <IndexPanel
+            title="The exchange's"
+            note="published by NEPSE"
+            accent="var(--seq-5)"
+            rows={EXCHANGE_ROWS}
+          />
+        </div>
+
+        <p>
+          <strong>Equal-weighted</strong> means every listed scrip counts the same, so the
+          figure answers a real question: what would an investor holding every scrip in
+          equal amounts have earned? NEPSE&apos;s indices weight by market capitalisation
+          instead, so a large bank moves them more than a small one. That needs share
+          counts, and the archive holds prices and volumes only, so the exchange&apos;s
+          arithmetic <strong>cannot be reproduced from this data</strong>.
         </p>
         <p>
-          What is plotted is an <strong>equal-weighted</strong> index: the average of every
-          scrip&apos;s day-on-day price change, chained forward from 100. It answers a real
-          question, what would an investor holding every listed scrip in equal amounts
-          have earned. It is labelled as such everywhere it appears, and it is not a
-          substitute for the exchange&apos;s own index and should not be quoted as one.
+          The exchange&apos;s levels are therefore <strong>read rather than derived</strong>,
+          which is why they begin in October 2026 rather than in 2011: the archive can walk
+          its price history backwards and rebuild it, but the source only ever shows the
+          current session&apos;s index levels, so they could only be accumulated from the
+          day that began. Wherever either index appears it is labelled, and the
+          equal-weighted one should not be quoted as NEPSE&apos;s.
         </p>
       </Section>
 
@@ -140,11 +203,70 @@ export default function AboutPage() {
   );
 }
 
+/**
+ * One of the two indices, as a panel of the same five questions.
+ *
+ * The accent rule is the card language this site uses everywhere else, and the two panels
+ * carry different colours on purpose: `--accent` for the thing this site computes, the
+ * sequential blue for the thing it merely republishes. That keeps the two distinguishable
+ * by a second channel, the same way a gain and a loss are.
+ */
+function IndexPanel({
+  title,
+  note,
+  accent,
+  rows,
+}: {
+  title: string;
+  note: string;
+  accent: string;
+  rows: readonly (readonly [string, string])[];
+}) {
+  return (
+    <section className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
+      <header className="flex flex-wrap items-baseline gap-2.5">
+        <span
+          aria-hidden
+          className="h-3.5 w-1 shrink-0 self-center rounded-full"
+          style={{ background: accent }}
+        />
+        <h3 className="text-sm font-medium">{title}</h3>
+        <span className="text-xs text-[var(--muted)]">{note}</span>
+      </header>
+
+      <dl className="mt-4 space-y-3">
+        {rows.map(([aspect, answer]) => (
+          <div key={aspect}>
+            <dt className="text-xs text-[var(--muted)]">{aspect}</dt>
+            <dd className="mt-0.5 leading-relaxed">{answer}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+/**
+ * A titled block of prose.
+ *
+ * The heading carries the same short accent rule the cards use, and the body is indented
+ * to the rule's width, so a section here reads as the same kind of object as a card on the
+ * market page rather than as a separate document style. That is the whole of the restyle:
+ * the prose is unchanged, and what moved is that the page now speaks the site's language.
+ */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      <div className="space-y-2 text-sm leading-relaxed text-[var(--ink-2)]">{children}</div>
+    <section className="space-y-3">
+      <h2 className="flex items-baseline gap-2.5 text-lg font-semibold tracking-tight">
+        <span
+          aria-hidden
+          className="h-3.5 w-1 shrink-0 self-center rounded-full bg-[var(--accent)]"
+        />
+        {title}
+      </h2>
+      <div className="space-y-3 pl-3.5 text-sm leading-relaxed text-[var(--ink-2)]">
+        {children}
+      </div>
     </section>
   );
 }

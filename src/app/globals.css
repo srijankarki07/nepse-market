@@ -168,6 +168,39 @@ body {
 }
 
 /**
+ * One focus ring for the whole site.
+ *
+ * ## Why this is global rather than a class on each control
+ *
+ * The audit that prompted it found exactly the failure this shape prevents: the theme
+ * toggle had a ring, the range buttons had **none at all**, and the coverage chart removed
+ * the browser's with `focus:outline-none`, so a keyboard user navigating the front page
+ * could see where they were on one control in ten. Styling focus per component means the
+ * next component added has none either, and nothing fails when it does. One rule cannot be
+ * forgotten by a component that does not know it exists.
+ *
+ * ## `:focus-visible`, not `:focus`
+ *
+ * A mouse user clicking a range pill should not get a ring around a control whose selected
+ * state is already drawn. `:focus-visible` gives it to the keyboard, which is who needs it.
+ *
+ * ## The colour is the accent, and the offset matters
+ *
+ * The tokens reserve `--accent` for "you can touch this", so a ring in it means the same
+ * thing a link does. The offset keeps the ring clear of the element's own border rather
+ * than stacked on it, which is what makes it legible on the range group where the selected
+ * pill is already filled with the accent.
+ *
+ * Nothing in this file or the components resets `outline` any more. A reset here would
+ * undo this rule everywhere at once, and it would look like a single missing ring rather
+ * than like the bug it is.
+ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/**
  * The hero's reveal animations.
  *
  * All of it collapses to nothing under `prefers-reduced-motion`, which is not a nicety:

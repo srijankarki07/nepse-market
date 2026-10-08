@@ -233,9 +233,15 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
             // `group` plus a positioned child gives the tooltip without any state, and
             // `tabIndex` on the column means the same information arrives on keyboard
             // focus rather than only on hover.
+            //
+            // The outline is no longer suppressed here. It was, on the grounds that the
+            // tooltip said everything the ring would; the tooltip says what the column is
+            // but not that the column is what has focus, and a keyboard user tabbing
+            // through the chart needs the second. The global `:focus-visible` rule draws it
+            // and the tooltip still opens beside it.
             <div
               key={year}
-              className="group relative flex h-full flex-1 flex-col justify-end focus:outline-none"
+              className="group relative flex h-full flex-1 flex-col justify-end rounded-sm"
               tabIndex={0}
               aria-label={`${year}: ${sessions} sessions${note === undefined ? "" : `, shortened by ${note}`}`}
             >
