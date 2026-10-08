@@ -42,23 +42,60 @@ import { useEffect, useMemo, useRef } from "react";
  */
 export type TerminalPrompt = "$" | ">";
 
+/**
+ * What a run of text in the transcript is, for the syntax colours.
+ *
+ * `pkg` is the odd one out: it is not a syntax category at all, it is the names this site
+ * cares about, `npm`, `node` and the package itself, and it takes `--accent` because the
+ * accent already means "the thing you came here for". The rest are the usual categories.
+ *
+ * `num` takes the data green rather than a syntax colour, deliberately. Every number in
+ * this transcript is one of the archive's own figures, so it is coloured like every other
+ * figure on the site: it is data that happens to be inside a code sample, not code that
+ * happens to look like data.
+ */
+export type TerminalTone = "pkg" | "key" | "fn" | "str" | "num" | "dim";
+
+/** One run of text, with the colour it carries. Runs with no tone are left at `--ink`. */
+export interface TerminalSpan {
+  readonly text: string;
+  readonly tone?: TerminalTone;
+}
+
+/**
+ * A line's content: a plain string for the lines that are one colour, spans for the ones
+ * that are not.
+ *
+ * The union rather than spans everywhere because most lines genuinely are one colour, and
+ * forcing `[{ text: "added 1 package" }]` on the reader of that transcript buys nothing.
+ */
+export type LineText = string | readonly TerminalSpan[];
+
 export type TerminalLine =
-  | { readonly kind: "command"; readonly text: string; readonly prompt?: TerminalPrompt }
-  | {
-      readonly kind: "output";
-      readonly text: string;
-      readonly tone?: "key" | "str" | "num" | "dim";
-    }
+  | { readonly kind: "command"; readonly text: LineText; readonly prompt?: TerminalPrompt }
+  | { readonly kind: "output"; readonly text: LineText }
   | { readonly kind: "blank" };
 
-// `num` is the `-ink` green: the transcript sits on `--surface`, which is the light one in
-// the light theme, and this is 13px text rather than a mark. See the palette note.
-const TONE: Record<string, string> = {
-  key: "text-[var(--accent)]",
+const TONE: Record<TerminalTone, string> = {
+  pkg: "text-[var(--accent)]",
+  key: "text-[var(--code-kw)]",
+  fn: "text-[var(--code-fn)]",
   str: "text-[var(--code-str)]",
   num: "text-[var(--up-ink)]",
-  dim: "text-[var(--muted)]",
+  dim: "text-[var(--code-cm)]",
 };
+
+/** A line's spans, whether it was written as one or as a list. */
+function spansOf(text: LineText): readonly TerminalSpan[] {
+  return typeof text === "string" ? [{ text }] : text;
+}
+
+/** The line's characters, which is what the typing animation counts. */
+function textOf(text: LineText): string {
+  return spansOf(text)
+    .map((span) => span.text)
+    .join("");
+}
 
 /**
  * The rhythm of the session.
@@ -85,14 +122,14 @@ const BLANK = 220;
 
 /** How long a line occupies the transcript, which is also the delay before the next one. */
 function durationOf(line: TerminalLine): number {
-  if (line.kind === "command") return line.text.length * PER_CHAR + AFTER_COMMAND;
+  if (line.kind === "command") return textOf(line.text).length * PER_CHAR + AFTER_COMMAND;
   if (line.kind === "output") return BETWEEN_OUTPUTS;
   return BLANK;
 }
 
 /** How long a command's own line takes to type, which is how long its caret lives. */
 function typingDuration(line: TerminalLine): number {
-  return line.kind === "command" ? line.text.length * PER_CHAR : 0;
+  return line.kind === "command" ? textOf(line.text).length * PER_CHAR : 0;
 }
 
 export function Terminal({
@@ -140,7 +177,7 @@ export function Terminal({
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     /** The height of the fade at the bottom of the window. Mirrors `.terminal-body`. */
-    const FADE = 40;
+    const FADE = 88;
 
     /*
      * Measured to the last line of text rather than to `scrollHeight`, because the window's
@@ -207,7 +244,7 @@ export function Terminal({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--surface)] ${className}`}
+      className={`relative overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--surface)] ${className}`}
     >
       <div className="flex items-center gap-2 border-b border-[var(--hairline)] px-4 py-2.5">
         <span aria-hidden="true" className="flex gap-1.5">
@@ -230,7 +267,7 @@ export function Terminal({
           fade, so without room to scroll past it the final line of the transcript would be
           permanently dimmed. The padding is what the window scrolls into.
         */}
-        <pre className="w-max min-w-full px-4 pt-4 pb-14 font-mono text-[12.5px] leading-relaxed">
+        <pre className="w-max min-w-full px-4 pt-4 pb-24 font-mono text-[12.5px] leading-relaxed">
           <code>
             {timed.map(({ line, start, key }) => {
               if (line.kind === "blank") {
@@ -275,11 +312,15 @@ export function Terminal({
                         {
                           animationDelay: `${start}ms`,
                           animationDuration: `${typingDuration(line)}ms`,
-                          "--chars": line.text.length,
+                          "--chars": textOf(line.text).length,
                         } as React.CSSProperties
                       }
                     >
-                      {line.text}
+                      {spansOf(line.text).map((span, at) => (
+                        <span key={at} className={span.tone === undefined ? "" : TONE[span.tone]}>
+                          {span.text}
+                        </span>
+                      ))}
                     </span>
                     {/*
                       The caret lives for exactly as long as its own command types. It used
@@ -308,16 +349,23 @@ export function Terminal({
                   ref={(node) => {
                     lineRefs.current[key] = node;
                   }}
-                  className={`terminal-appears block whitespace-pre ${TONE[line.tone ?? ""] ?? ""}`}
+                  className="terminal-appears block whitespace-pre"
                   style={{ animationDelay: `${start}ms` }}
                 >
-                  {line.text}
+                  {spansOf(line.text).map((span, at) => (
+                    <span key={at} className={span.tone === undefined ? "" : TONE[span.tone]}>
+                      {span.text}
+                    </span>
+                  ))}
                 </span>
               );
             })}
           </code>
         </pre>
       </div>
+
+      {/* The window's bottom edge, dissolving into the page. See `.terminal-blend`. */}
+      <div aria-hidden="true" className="terminal-blend" />
     </div>
   );
 }

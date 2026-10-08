@@ -105,12 +105,18 @@
   --seq-6: #256abf;
   --seq-7: #184f95;
 
-  /* Code highlighting in the hero. Its own slots, distinct from the data palette —
-     these colour syntax, not facts, and reusing a series hue would imply a relationship
-     that does not exist. */
+  /* Syntax highlighting in the hero's terminal. Its own slots, distinct from the data
+     palette — these colour syntax, not facts, and reusing a series hue would imply a
+     relationship that does not exist.
+
+     `--code-num` is deliberately absent. The numbers inside the transcript are the
+     archive's own figures, so they take `--up-ink` with every other figure on the site
+     rather than a syntax colour: they are data that happens to be inside a code sample,
+     not code that happens to look like data. */
   --code-kw: #6d28d9;
+  --code-fn: #1d4ed8;
   --code-str: #047857;
-  --code-cm: #898781;
+  --code-cm: #686660;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -137,6 +143,7 @@
     --flat-ink: var(--flat);
 
     --code-kw: #c4b5fd;
+    --code-fn: #93c5fd;
     --code-str: #fdba74;
     --code-cm: #8a9ea3;
   }
@@ -171,6 +178,7 @@
   --flat-ink: var(--flat);
 
   --code-kw: #c4b5fd;
+  --code-fn: #93c5fd;
   --code-str: #fdba74;
   --code-cm: #8a9ea3;
 }
@@ -194,6 +202,7 @@
   --color-accent: var(--accent);
 
   --color-code-kw: var(--code-kw);
+  --color-code-fn: var(--code-fn);
   --color-code-str: var(--code-str);
   --color-code-cm: var(--code-cm);
 
@@ -268,14 +277,22 @@ body {
  * has nothing to do with whether motion is allowed.
  */
 .terminal-body {
-  /* Sized so the transcript's last line lands inside the fade and dissolves there, rather
-     than sitting fully below the window where it would simply be missing. The transcript is
-     fixed and does not reflow, so this is a number that stays right. */
-  height: 16rem;
+  /* Sized so the transcript's last line or two land inside the fade and dissolve there,
+     rather than sitting fully below the window where they would simply be missing. Tall
+     enough that the dissolve covers the tail rather than a quarter of the session: the fade
+     got deeper when the hero was stacked, and this is what pays for it. The transcript is
+     fixed and does not reflow, so these are numbers that stay right. */
+  height: 19rem;
   overflow: auto;
-  /* The fade is two and a half lines tall, which is enough to read as a dissolve rather
-     than as a shadow, and short enough that the line being typed stays clear of it. */
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent);
+  /* Nearly four lines tall. Long enough to read as a dissolve rather than as a shadow, and
+     the curve is eased rather than linear so the last line goes gradually instead of
+     vanishing at a threshold. */
+  mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 5.5rem),
+    color-mix(in oklab, #000 45%, transparent) calc(100% - 2rem),
+    transparent 100%
+  );
 
   /* No scrollbar. The window is a fixed height on purpose and the transcript runs past it
      on purpose, and a scrollbar is the one element that turns that from a session still
@@ -286,6 +303,30 @@ body {
 
 .terminal-body::-webkit-scrollbar {
   display: none;
+}
+
+/**
+ * The terminal's bottom edge, dissolving into the page.
+ *
+ * The mask above fades the *text*; this fades the *window*, so the card stops ending in a
+ * border and a pair of rounded corners and instead runs out into whatever is behind it. The
+ * two are separate because they answer different questions: the mask is about a session
+ * continuing, this is about the box not being a box.
+ *
+ * It has to be an overlay rather than a property of the card, because what is being hidden
+ * is the card's own border, and a border cannot fade. `pointer-events: none` so it never
+ * intercepts a click on the content underneath.
+ *
+ * In the light theme `--surface` and `--plane` differ by three units per channel, so what a
+ * reader sees here is mostly the disappearing border; in the dark they are far enough apart
+ * that the card itself visibly sinks into the page.
+ */
+.terminal-blend {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--plane));
 }
 
 /**
@@ -487,6 +528,11 @@ body {
     height: auto;
     overflow: visible;
     mask-image: none;
+  }
+
+  /* Nothing is being dissolved into anything: the whole transcript is simply there. */
+  .terminal-blend {
+    display: none;
   }
 }
 
