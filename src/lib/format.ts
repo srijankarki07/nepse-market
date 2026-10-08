@@ -110,7 +110,10 @@ export function direction(value: number | null | undefined): "up" | "down" | "fl
  */
 export function changeColor(value: number | null | undefined): string {
   const which = direction(value);
-  if (which === "up") return "text-[var(--up)]";
-  if (which === "down") return "text-[var(--down)]";
+  // The `-ink` tokens rather than the marks. This is text at 11-14px, and in the light
+  // theme the validated green is not dark enough to read at that size. The palette note in
+  // globals.css has the measurements and the reason they are two tokens rather than one.
+  if (which === "up") return "text-[var(--up-ink)]";
+  if (which === "down") return "text-[var(--down-ink)]";
   return "text-[var(--muted)]";
 }

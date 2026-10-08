@@ -182,7 +182,13 @@ export function Breadth({
 }
 
 function Figure({ label, value, tone }: { label: string; value: number; tone: "up" | "down" | "flat" }) {
-  const colour = tone === "up" ? "var(--up)" : tone === "down" ? "var(--down)" : "var(--flat)";
+  // The `-ink` tokens, matching `StatTile`, which draws the same "how many advanced"
+  // figure on the front page. They are the same measurement and should not be two shades
+  // of green depending on which card a reader is looking at. At 24px this only has to
+  // clear 3:1, which the mark colour does, but the ink one clears 6.66 and agreeing with
+  // the tile beside it is worth more than the difference.
+  const colour =
+    tone === "up" ? "var(--up-ink)" : tone === "down" ? "var(--down-ink)" : "var(--flat-ink)";
 
   return (
     <div>
@@ -224,7 +230,14 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex h-32 items-end gap-1">
+      {/*
+        `list` and `listitem` rather than plain divs, which is what Lighthouse was failing
+        on. `aria-label` is prohibited on an element whose role is `generic`, and each
+        column carries one so that a keyboard user tabbing the chart hears the year and its
+        count. Naming the bars as a list is also the honest description: sixteen labelled
+        values, which is what they are.
+      */}
+      <div role="list" className="flex h-32 items-end gap-1">
         {entries.map(([year, sessions]) => {
           const complete = sessions >= fullYear * 0.85;
           const note = notable.get(year);
@@ -241,6 +254,7 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
             // and the tooltip still opens beside it.
             <div
               key={year}
+              role="listitem"
               className="group relative flex h-full flex-1 flex-col justify-end rounded-sm"
               tabIndex={0}
               aria-label={`${year}: ${sessions} sessions${note === undefined ? "" : `, shortened by ${note}`}`}

@@ -290,7 +290,14 @@ export function SeriesChange({ points }: { points: readonly SeriesPoint[] }) {
 
   const change = last - first;
   const changePercent = (change / first) * 100;
-  const className = change > 0 ? "text-[var(--up)]" : change < 0 ? "text-[var(--down)]" : "text-[var(--flat)]";
+  // The `-ink` tokens: this is a written figure, signed, not a mark to be told apart from
+  // another mark. See the palette note in globals.css.
+  const className =
+    change > 0
+      ? "text-[var(--up-ink)]"
+      : change < 0
+        ? "text-[var(--down-ink)]"
+        : "text-[var(--flat-ink)]";
 
   return (
     <span className={`tabular font-medium ${className}`}>

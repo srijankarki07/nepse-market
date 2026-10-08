@@ -41,6 +41,34 @@
  * a link. It is the third role in the palette and it deliberately overlaps none of the
  * others, so a colour on this page always means exactly one of three things: direction
  * (up/down), magnitude (the sequential ramp), or "you can touch this".
+ *
+ * ## Why there are `--up-ink` colours as well as `--up` colours
+ *
+ * Because in the light theme one colour cannot do both jobs, and that is a measurement
+ * rather than a preference.
+ *
+ * A **mark** (a chart line, a tint, a bar) has to be separable from the *other* direction:
+ * that is the deuteranope ΔE of 15.9 above, and it is bought by pairing a bright green with
+ * a deep red so **lightness** separates them where hue cannot. A **piece of text** has to be
+ * legible against its own background: 4.5:1, which the bright green misses at 3.27 on the
+ * light surface and 2.71 on its own chip tint.
+ *
+ * The obvious fix, darkening `--up`, breaks the first job to do the second. Measured: the
+ * lightest green that reaches 4.5:1 everywhere drops the pair's separation to **ΔE 5.2**,
+ * from 20.9 today, and the floor this palette was validated against is 8. A reader who
+ * cannot separate red from green would then be looking at two dark colours.
+ *
+ * So the two jobs get two tokens. `--up` and `--down` stay the validated pair and are used
+ * for every mark; `--up-ink` and `--down-ink` are used wherever the direction is *written*.
+ * Where the direction is written it is also **signed** (`+`/`−`), so the colour is the
+ * second channel there and its separation from the other direction is not load-bearing.
+ *
+ * The dark theme satisfies both jobs with one colour (11.04 and 6.19 against its surface),
+ * so there the ink tokens alias the marks. The split exists for the light theme and costs
+ * the dark theme nothing.
+ *
+ * `--muted` moved from #898781 to #686660 for the same reason: it is only ever text, at
+ * 11-13px, and it measured 3.41 against the plane and 3.50 against the surface.
  */
 
 :root {
@@ -50,7 +78,7 @@
   --plane: #f9f9f7;
   --ink: #0b0b0b;
   --ink-2: #52514e;
-  --muted: #898781;
+  --muted: #686660;
   --grid: #e1e0d9;
   --axis: #c3c2b7;
   --hairline: rgba(11, 11, 11, 0.1);
@@ -58,6 +86,11 @@
   --up: #0ca30c;
   --down: #a30202;
   --flat: #898781;
+
+  /* The text-safe direction colours. See the note below `--accent`. */
+  --up-ink: #066a06;
+  --down-ink: #a30202;
+  --flat-ink: var(--muted);
 
   /* Interactive state. A deep cyan: far enough from the up-green to be told apart by a
      reader who cannot separate red from green, and dark enough to pass on white. */
@@ -98,6 +131,11 @@
     --flat: #8a9ea3;
     --accent: #7dd3fc;
 
+    /* Both jobs are satisfied by one colour here, so the ink tokens alias the marks. */
+    --up-ink: var(--up);
+    --down-ink: var(--down);
+    --flat-ink: var(--flat);
+
     --code-kw: #c4b5fd;
     --code-str: #fdba74;
     --code-cm: #8a9ea3;
@@ -127,6 +165,11 @@
   --flat: #8a9ea3;
   --accent: #7dd3fc;
 
+  /* Both jobs are satisfied by one colour here, so the ink tokens alias the marks. */
+  --up-ink: var(--up);
+  --down-ink: var(--down);
+  --flat-ink: var(--flat);
+
   --code-kw: #c4b5fd;
   --code-str: #fdba74;
   --code-cm: #8a9ea3;
@@ -145,6 +188,9 @@
   --color-up: var(--up);
   --color-down: var(--down);
   --color-flat: var(--flat);
+  --color-up-ink: var(--up-ink);
+  --color-down-ink: var(--down-ink);
+  --color-flat-ink: var(--flat-ink);
   --color-accent: var(--accent);
 
   --color-code-kw: var(--code-kw);

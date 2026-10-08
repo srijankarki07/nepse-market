@@ -30,10 +30,12 @@ export type TerminalLine =
   | { readonly kind: "output"; readonly text: string; readonly tone?: "key" | "str" | "num" | "dim" }
   | { readonly kind: "blank" };
 
+// `num` is the `-ink` green: the transcript sits on `--surface`, which is the light one in
+// the light theme, and this is 13px text rather than a mark. See the palette note.
 const TONE: Record<string, string> = {
   key: "text-[var(--accent)]",
   str: "text-[var(--code-str)]",
-  num: "text-[var(--up)]",
+  num: "text-[var(--up-ink)]",
   dim: "text-[var(--muted)]",
 };
 

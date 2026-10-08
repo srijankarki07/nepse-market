@@ -137,6 +137,12 @@ export function MarketTable({
             className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--muted)]"
           />
           <input
+            // `id` and `name` as well as the label: `aria-label` is what a screen reader
+            // reads, and the two attributes are what the browser needs to treat this as a
+            // named field rather than an anonymous one. Their absence is a DevTools
+            // accessibility issue, and it is the only form field on the site.
+            id="market-filter"
+            name="filter"
             type="search"
             value={filter}
             onChange={(event) => {

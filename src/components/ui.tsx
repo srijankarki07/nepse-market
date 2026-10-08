@@ -266,7 +266,14 @@ export function Chip({
   className?: string;
 }) {
   const change = changePercent;
-  const tone = change === null || change === 0 ? "var(--flat)" : change > 0 ? "var(--up)" : "var(--down)";
+  const up = change !== null && change > 0;
+  const down = change !== null && change < 0;
+
+  // The tint is the mark colour and the text is the ink colour, which in the dark theme are
+  // the same value and in the light theme are not. The tint is a background and only has to
+  // be visible; the text has to be readable on it, and the mark green is not.
+  const tone = up ? "var(--up)" : down ? "var(--down)" : "var(--flat)";
+  const ink = up ? "var(--up-ink)" : down ? "var(--down-ink)" : "var(--flat-ink)";
   const text = percent(change);
 
   return (
@@ -274,7 +281,7 @@ export function Chip({
       className={`tabular inline-flex items-center justify-end rounded-md font-medium ${
         size === "sm" ? "px-1.5 py-0.5 text-[11px]" : "px-2 py-1 text-xs"
       } ${className}`}
-      style={{ background: `color-mix(in oklab, ${tone} 16%, transparent)`, color: tone }}
+      style={{ background: `color-mix(in oklab, ${tone} 16%, transparent)`, color: ink }}
     >
       {text}
     </span>
@@ -362,19 +369,26 @@ export function StatTile({
   tone?: "up" | "down" | "flat" | "neutral" | "accent";
   className?: string;
 }) {
+  // The tint comes off the mark colour and the figure off the ink colour, which differ only
+  // in the light theme. See the palette note in globals.css: the light mark green is chosen
+  // to stay separable from the red, not to be read at 20px on its own tint, and it manages
+  // the second job at 3.01 rather than the 4.5 a figure this size needs.
+  const mark =
+    tone === "up" ? "var(--up)" : tone === "down" ? "var(--down)" : tone === "accent" ? "var(--accent)" : "var(--ink)";
+
   const ink =
     tone === "up"
-      ? "var(--up)"
+      ? "var(--up-ink)"
       : tone === "down"
-        ? "var(--down)"
-        : tone === "accent"
-          ? "var(--accent)"
-          : "var(--ink)";
+        ? "var(--down-ink)"
+        : tone === "flat"
+          ? "var(--flat-ink)"
+          : mark;
 
   // Tinted by mixing into the surface, the same expression the avatars use, so one rule
   // works in both themes without a second set of tokens.
   const background =
-    tone === "neutral" ? "var(--surface)" : `color-mix(in oklab, ${ink} 8%, var(--surface))`;
+    tone === "neutral" ? "var(--surface)" : `color-mix(in oklab, ${mark} 8%, var(--surface))`;
 
   return (
     <div

@@ -116,9 +116,13 @@ export const metadata: Metadata = {
  */
 export const viewport: Viewport = {
   colorScheme: "light dark",
+  // The browser's own chrome, tinted to match. Re-read from `globals.css` when the palette
+  // moves, the same way `make-icons.py` has to be: the dark value here was still the old
+  // neutral long after the site went slate-teal, because a `theme-color` is in the address
+  // bar and nothing on the page shows it.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f9f9f7" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d0d0d" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b1418" },
   ],
 };
 
@@ -126,6 +130,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // The inline script below stamps `data-theme` on this element before React hydrates,
+      // from a value the server cannot know. Without this, every reader who has ever chosen
+      // a theme gets a hydration mismatch logged on every page load, and React discards and
+      // re-renders the root to recover. Suppressing it on `<html>` is the documented remedy
+      // for exactly this pattern, and it suppresses the warning for this element only.
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
