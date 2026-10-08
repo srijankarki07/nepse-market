@@ -20,7 +20,7 @@
  * place on the site, which is the one thing this page cannot afford.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 import { Terminal, type TerminalLine } from "@/components/terminal";
@@ -39,6 +39,17 @@ const NPM = "https://www.npmjs.com/package/@srijankarki44/nepse-data";
  * Every value is real, and the symbol is NABIL when it traded and the busiest scrip when it
  * did not, so the demo cannot print an empty row for a company that happens to be suspended
  * on the day someone visits.
+ *
+ * ## The shape is a real session, not a script
+ *
+ * `npm install` is a shell command and gets a `$`; everything after it is a Node expression
+ * and gets the REPL's `>`. A transcript that answered a `$` with a JavaScript expression
+ * would read as wrong to the audience this is written for, which is the one thing a device
+ * like this cannot afford.
+ *
+ * The REPL's echo of an assignment is skipped rather than faked. `const x = ...` really does
+ * print `undefined` in Node, and printing it here would be honest but would spend two of the
+ * window's lines saying nothing.
  */
 function transcriptFor(market: Market): TerminalLine[] {
   const featured =
@@ -51,7 +62,8 @@ function transcriptFor(market: Market): TerminalLine[] {
     { kind: "command", text: INSTALL },
     { kind: "output", text: "added 1 package, and no market data", tone: "dim" },
     { kind: "blank" },
-    { kind: "command", text: "const market = await nepse.latest();" },
+    { kind: "command", text: "node", prompt: "$" },
+    { kind: "command", text: "const market = await nepse.latest();", prompt: ">" },
     {
       kind: "output",
       text: `{ date: "${market.date}", scrips: ${market.rows.length}, turnover: "${turnover(totalTurnover)}" }`,
@@ -62,7 +74,11 @@ function transcriptFor(market: Market): TerminalLine[] {
 
   if (featured !== undefined) {
     lines.push(
-      { kind: "command", text: `const ${featured.symbol.toLowerCase()} = await nepse.quote("${featured.symbol}");` },
+      {
+        kind: "command",
+        text: `const ${featured.symbol.toLowerCase()} = await nepse.quote("${featured.symbol}");`,
+        prompt: ">",
+      },
       {
         kind: "output",
         text: `{ close: ${price(featured.close)}, change: ${signed(featured.change)}, changePercent: ${percent(featured.changePercent)} }`,
@@ -72,7 +88,12 @@ function transcriptFor(market: Market): TerminalLine[] {
     );
   }
 
-  lines.push({ kind: "output", text: "4 requests · the index, two sessions, the directory", tone: "dim" });
+  lines.push({ kind: "command", text: "nepse.manifest()", prompt: ">" });
+  lines.push({
+    kind: "output",
+    text: `{ latest: "${market.date}", sessions: ${count(market.sessionsInArchive)} }`,
+    tone: "dim",
+  });
 
   return lines;
 }
@@ -117,10 +138,17 @@ export function Hero({ market }: { market: Market }) {
     { durationMs: 1100 },
   );
 
+  /*
+   * Held steady for the life of a session rather than rebuilt on every render. `Terminal`
+   * memoises its timings on this array, so a new one each render would restart the whole
+   * animation every time anything on the page re-rendered, including the two count-ups.
+   */
+  const transcript = useMemo(() => transcriptFor(market), [market]);
+
   return (
-    <section className="hero-wash grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-12">
+    <section className="hero-wash flex flex-col gap-8 lg:gap-10">
       {/*
-        `min-w-0` is load-bearing. A grid child defaults to `min-width: auto`, which means it
+        `min-w-0` is load-bearing. A flex child defaults to `min-width: auto`, which means it
         refuses to shrink below its content, and the terminal below is content that does not
         wrap. Without this the whole page scrolls sideways on a phone.
       */}
@@ -187,10 +215,17 @@ export function Hero({ market }: { market: Market }) {
         </dl>
       </div>
 
+      {/*
+        Below the copy rather than beside it, which is the change this hero wanted. Side by
+        side, both columns were cramped: the headline had to break early and the terminal
+        had to wrap the very lines that are supposed to look like a real session. Stacked,
+        the transcript gets the page's full width and its lines stay one line each, which is
+        what makes it read as a terminal rather than as wrapped prose.
+      */}
       <Terminal
-        className="animate-fade [animation-delay:180ms]"
+        className="animate-fade w-full min-w-0 [animation-delay:180ms]"
         title="@srijankarki44/nepse-data — node"
-        lines={transcriptFor(market)}
+        lines={transcript}
       />
     </section>
   );
