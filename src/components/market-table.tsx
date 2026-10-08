@@ -29,7 +29,9 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { changeColor, count, percent, price, signed, turnover, volume } from "@/lib/format";
+import { Search } from "@/components/icons";
+import { Avatar, Chip, Sparkline } from "@/components/ui";
+import { count, turnover, volume } from "@/lib/format";
 import type { MarketRow } from "@/lib/market";
 
 type SortKey = "symbol" | "close" | "change" | "volume" | "turnover";
@@ -44,7 +46,18 @@ const COLUMNS: Array<{ key: SortKey; label: string; numeric: boolean }> = [
 
 const PAGE_SIZE = 25;
 
-export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
+/**
+ * `trends` is a week of closes per ticker, drawn as a sparkline. It is optional so the
+ * table still works when the caller has not fetched them: the column disappears rather
+ * than rendering a row of empty boxes.
+ */
+export function MarketTable({
+  rows,
+  trends,
+}: {
+  rows: readonly MarketRow[];
+  trends?: ReadonlyMap<string, readonly number[]>;
+}) {
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("turnover");
   const [descending, setDescending] = useState(true);
@@ -118,17 +131,23 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-4">
-        <input
-          type="search"
-          value={filter}
-          onChange={(event) => {
-            setFilter(event.target.value);
-            setPage(0);
-          }}
-          placeholder="Filter by ticker or company"
-          aria-label="Filter the market by ticker or company name"
-          className="w-full max-w-xs rounded-md border border-[var(--hairline)] bg-[var(--surface)] px-3 py-2 text-sm outline-none focus:border-[var(--axis)]"
-        />
+        <div className="relative w-full max-w-xs">
+          <Search
+            size={15}
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[var(--muted)]"
+          />
+          <input
+            type="search"
+            value={filter}
+            onChange={(event) => {
+              setFilter(event.target.value);
+              setPage(0);
+            }}
+            placeholder="Filter by ticker or company"
+            aria-label="Filter the market by ticker or company name"
+            className="w-full rounded-md border border-[var(--hairline)] bg-[var(--surface)] py-2 pr-3 pl-9 text-sm outline-none focus:border-[var(--accent)]"
+          />
+        </div>
         <p className="text-xs text-[var(--muted)]">
           {count(sorted.length)} of {count(rows.length)} securities
         </p>
@@ -162,6 +181,12 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
                   </button>
                 </th>
               ))}
+              {trends !== undefined && (
+                <th scope="col" className="px-4 py-3 text-right font-medium text-[var(--ink-2)]">
+                  <span className="sr-only">Seven-day trend</span>
+                  <span aria-hidden="true">7d</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -171,22 +196,33 @@ export function MarketTable({ rows }: { rows: readonly MarketRow[] }) {
                 className="border-b border-[var(--hairline)] last:border-0 hover:bg-[var(--grid)]/40"
               >
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/symbol/?t=${encodeURIComponent(row.symbol)}`}
-                    className="font-medium hover:underline"
-                  >
-                    {row.symbol}
-                  </Link>
-                  {row.name !== null && (
-                    <span className="block max-w-[18rem] truncate text-xs text-[var(--muted)]">
-                      {row.name}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-3">
+                    <Avatar symbol={row.symbol} size={28} />
+                    <Link
+                      href={`/symbol/?t=${encodeURIComponent(row.symbol)}`}
+                      className="min-w-0 hover:underline"
+                    >
+                      <span className="font-mono text-[13px] font-semibold">{row.symbol}</span>
+                      {row.name !== null && (
+                        <span className="block max-w-[16rem] truncate text-xs text-[var(--muted)]">
+                          {row.name}
+                        </span>
+                      )}
+                    </Link>
+                  </div>
                 </td>
-                <td className="tabular px-4 py-3 text-right">{price(row.close)}</td>
-                <td className={`tabular px-4 py-3 text-right ${changeColor(row.change)}`}>
-                  {signed(row.change)}
-                  <span className="block text-xs opacity-80">{percent(row.changePercent)}</span>
+                <td className="tabular px-4 py-3 text-right">
+                  {row.close === null ? "\u2014" : row.close.toFixed(2)}
+                </td>
+                {trends !== undefined && (
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end">
+                      <Sparkline values={trends.get(row.symbol) ?? []} />
+                    </div>
+                  </td>
+                )}
+                <td className="px-4 py-3 text-right">
+                  <Chip changePercent={row.changePercent} size="sm" />
                 </td>
                 <td className="tabular px-4 py-3 text-right text-[var(--ink-2)]">
                   {volume(row.volume)}

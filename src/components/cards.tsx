@@ -19,7 +19,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { changeColor, count, percent, signed } from "@/lib/format";
+import { Avatar, Chip } from "@/components/ui";
+import { count, percent } from "@/lib/format";
 import type { MarketRow } from "@/lib/market";
 
 /** Which family of question a card answers. Drives the accent, nothing else. */
@@ -88,13 +89,16 @@ export function ScripList({
       {rows.map((row) => (
         <li
           key={row.symbol}
-          className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+          className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
         >
+          {/* The mark is what makes a list of tickers scannable, which is why every
+              reference puts one in the first column. */}
+          <Avatar symbol={row.symbol} size={30} />
           <Link
             href={`/symbol/?t=${encodeURIComponent(row.symbol)}`}
             className="min-w-0 flex-1 hover:underline"
           >
-            <span className="text-sm font-medium">{row.symbol}</span>
+            <span className="font-mono text-sm font-semibold">{row.symbol}</span>
             {row.name !== null && (
               <span className="block truncate text-xs text-[var(--muted)]">{row.name}</span>
             )}
@@ -106,14 +110,14 @@ export function ScripList({
   );
 }
 
-/** The day change, signed and coloured. The sign carries it; colour is the second channel. */
+/**
+ * The day change, as a chip.
+ *
+ * A chip rather than bare coloured text because it gives the figure a fixed place to sit in
+ * a column, which is what the references rely on to make a table of changes readable.
+ */
 export function Change({ row }: { row: MarketRow }) {
-  return (
-    <span className={changeColor(row.change)}>
-      {signed(row.change)}
-      <span className="block text-xs opacity-80">{percent(row.changePercent)}</span>
-    </span>
-  );
+  return <Chip changePercent={row.changePercent} />;
 }
 
 /**

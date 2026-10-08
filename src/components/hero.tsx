@@ -1,205 +1,197 @@
 "use client";
 
 /**
- * The hero: a few lines of code on one side, and the market they produce on the other.
+ * The hero: what the package is, and the package running.
  *
- * ## Why it is a split rather than a headline
+ * ## Why a terminal rather than a snippet beside a chart
  *
  * This is the npm package's website, so the first thing it has to say is what the package
- * does. A screenshot of a dashboard says "here is a chart"; a code block beside the
- * dashboard it produces says "here is the code that made this", which is the actual
- * claim. The two are animated together, the calls resolve, the figures settle, the rows
- * fill in, so the relationship reads as cause and effect rather than as two pictures
- * placed side by side.
+ * does. The previous hero put a code block next to a dashboard and left the reader to
+ * connect them. A terminal does it as a sequence: the command goes in, the numbers come
+ * out, and the connection is the whole point rather than an inference.
  *
- * ## What is animated, and what is not
+ * The dashboard has not gone anywhere. It is the entire rest of the page, which is a more
+ * convincing demonstration of what the package returns than a preview panel was.
  *
- * Only the arrival: the count-up, the row stagger, the line drawing itself. Nothing loops
- * and nothing moves once it has landed, because a hero that keeps moving is a hero that
- * keeps pulling the eye back from the numbers. Everything collapses to the finished state
- * under `prefers-reduced-motion`.
+ * ## The figures are read from the archive, never written here
  *
- * ## The numbers are real
- *
- * Every figure here is read from the archive at runtime, not hard-coded for the mockup.
- * A hero that showed invented prices would be a lie told in the most prominent place on
- * the site.
+ * Date, scrip count and the featured quote all come from the session the page is already
+ * showing. A hero that printed invented prices would be a lie told in the most prominent
+ * place on the site, which is the one thing this page cannot afford.
  */
 
+import { useState } from "react";
 import Link from "next/link";
 
-import { changeColor, count, percent, price, sessionDate, signed } from "@/lib/format";
+import { Terminal, type TerminalLine } from "@/components/terminal";
+import { ArrowUpRight, Grid, Layers, TrendUp } from "@/components/icons";
+import { count, percent, price, sessionDate, signed, turnover } from "@/lib/format";
 import type { Market } from "@/lib/market";
 import { useCountUp } from "@/hooks/use-count-up";
 
 const INSTALL = "npm install @srijankarki44/nepse-data";
+const REPO = "https://github.com/srijankarki07/nepse-data";
+const NPM = "https://www.npmjs.com/package/@srijankarki44/nepse-data";
 
-/** A line of the snippet, split into coloured runs. `tone` is absent on plain text. */
-type Token = { readonly text: string; readonly tone?: "kw" | "str" | "cm" };
+/**
+ * The transcript, built from the session on screen.
+ *
+ * Every value is real, and the symbol is NABIL when it traded and the busiest scrip when it
+ * did not, so the demo cannot print an empty row for a company that happens to be suspended
+ * on the day someone visits.
+ */
+function transcriptFor(market: Market): TerminalLine[] {
+  const featured =
+    market.rows.find((row) => row.symbol === "NABIL") ??
+    [...market.rows].sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))[0];
 
-const SNIPPET: readonly Token[] = [
-  { text: "import", tone: "kw" },
-  { text: " { createClient } " },
-  { text: "from", tone: "kw" },
-  { text: ' "@srijankarki44/nepse-data"', tone: "str" },
-  { text: ";\n\n" },
-  { text: "const", tone: "kw" },
-  { text: " nepse = createClient();\n\n" },
-  { text: "const", tone: "kw" },
-  { text: " market = " },
-  { text: "await", tone: "kw" },
-  { text: " nepse.latest();   " },
-  { text: "// every scrip", tone: "cm" },
-  { text: "\n" },
-  { text: "const", tone: "kw" },
-  { text: " nabil  = " },
-  { text: "await", tone: "kw" },
-  { text: " nepse.quote(" },
-  { text: '"NABIL"', tone: "str" },
-  { text: "); " },
-  { text: "// with its change", tone: "cm" },
-];
+  const totalTurnover = market.rows.reduce((total, row) => total + (row.turnover ?? 0), 0);
 
-function toneClass(tone: Token["tone"]): string {
-  if (tone === "kw") return "text-[var(--code-kw)]";
-  if (tone === "str") return "text-[var(--code-str)]";
-  if (tone === "cm") return "text-[var(--code-cm)]";
-  return "";
+  const lines: TerminalLine[] = [
+    { kind: "command", text: INSTALL },
+    { kind: "output", text: "added 1 package, and no market data", tone: "dim" },
+    { kind: "blank" },
+    { kind: "command", text: "const market = await nepse.latest();" },
+    {
+      kind: "output",
+      text: `{ date: "${market.date}", scrips: ${market.rows.length}, turnover: "${turnover(totalTurnover)}" }`,
+      tone: "dim",
+    },
+    { kind: "blank" },
+  ];
+
+  if (featured !== undefined) {
+    lines.push(
+      { kind: "command", text: `const ${featured.symbol.toLowerCase()} = await nepse.quote("${featured.symbol}");` },
+      {
+        kind: "output",
+        text: `{ close: ${price(featured.close)}, change: ${signed(featured.change)}, changePercent: ${percent(featured.changePercent)} }`,
+        tone: "dim",
+      },
+      { kind: "blank" },
+    );
+  }
+
+  lines.push({ kind: "output", text: "4 requests · the index, two sessions, the directory", tone: "dim" });
+
+  return lines;
+}
+
+/** The install line, with a copy button. The one thing a reader came to the hero to take. */
+function InstallLine() {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(INSTALL);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // A blocked clipboard is not worth an error: the command is right there to select.
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] py-2 pr-2 pl-3">
+      <code className="min-w-0 flex-1 truncate font-mono text-[13px]">
+        <span aria-hidden="true" className="text-[var(--muted)] select-none">
+          ${" "}
+        </span>
+        {INSTALL}
+      </code>
+      <button
+        type="button"
+        onClick={copy}
+        className="shrink-0 rounded-md border border-[var(--hairline)] px-2.5 py-1 text-xs font-medium text-[var(--ink-2)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--ink)]"
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
 }
 
 export function Hero({ market }: { market: Market }) {
   const scrips = useCountUp(market.rows.length);
-  const turnover = useCountUp(
+  const totalTurnover = useCountUp(
     market.rows.reduce((total, row) => total + (row.turnover ?? 0), 0),
     { durationMs: 1100 },
   );
 
-  // The busiest five, which is what a reader scanning a hero wants and what the package
-  // returns without a second request, the whole session is already in memory.
-  const busiest = [...market.rows]
-    .sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))
-    .slice(0, 5);
-
   return (
-    <section className="hero-wash grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
+    <section className="hero-wash grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-12">
       {/*
-        `min-w-0` is load-bearing. A grid child defaults to `min-width: auto`, which
-        means it refuses to shrink below its content, and the `<pre>` below is content
-        that does not wrap. Without this the whole page scrolls sideways on a phone,
-        which is what happened the first time.
+        `min-w-0` is load-bearing. A grid child defaults to `min-width: auto`, which means it
+        refuses to shrink below its content, and the terminal below is content that does not
+        wrap. Without this the whole page scrolls sideways on a phone.
       */}
-      <div className="flex min-w-0 flex-col justify-center space-y-5">
-        <p className="animate-fade text-xs font-medium tracking-wide text-[var(--muted)] uppercase">
+      <div className="flex min-w-0 flex-col space-y-5">
+        <p className="animate-fade text-[11px] font-medium tracking-wide text-[var(--muted)] uppercase">
           npm · @srijankarki44/nepse-data
         </p>
 
-        <h1 className="animate-rise text-4xl leading-[1.1] font-semibold tracking-tight sm:text-5xl">
+        <h1 className="animate-rise text-4xl leading-[1.08] font-semibold tracking-tight sm:text-5xl">
           Every NEPSE close since 2011, in a few lines of code.
         </h1>
 
         <p className="animate-rise max-w-prose text-base text-[var(--ink-2)] [animation-delay:60ms]">
-          {count(market.sessionsInArchive)} sessions of end-of-day prices, served from a
-          public archive that maintains itself. No API key, no server, no rate limit,
-          and no data in the package, so it is current the moment you run it.
+          {count(market.sessionsInArchive)} sessions of end-of-day prices, served from a public
+          archive that maintains itself. No API key, no server, no rate limit, and no data in the
+          package, so it is current the moment you run it.
         </p>
 
-        <div className="animate-rise flex flex-wrap items-center gap-3 [animation-delay:120ms]">
-          <code className="rounded-md border border-[var(--hairline)] bg-[var(--surface)] px-3 py-2 font-mono text-sm">
-            {INSTALL}
-          </code>
-          <Link
-            href="/#market"
-            className="rounded-md bg-[var(--ink)] px-3 py-2 text-sm font-medium text-[var(--plane)] hover:opacity-90"
-          >
-            See the market
-          </Link>
-        </div>
-
-        <pre className="animate-rise w-full min-w-0 overflow-x-auto rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4 font-mono text-[13px] leading-relaxed [animation-delay:180ms]">
-          <code>
-            {SNIPPET.map((token, index) => (
-              <span key={index} className={toneClass(token.tone)}>
-                {token.text}
-              </span>
+        <div className="animate-rise space-y-3 [animation-delay:120ms]">
+          <InstallLine />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="#market"
+              className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--plane)] transition-opacity hover:opacity-90"
+            >
+              See the market
+            </Link>
+            {[
+              { href: NPM, label: "npm" },
+              { href: REPO, label: "GitHub" },
+            ].map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--hairline)] px-3 py-2 text-sm font-medium text-[var(--ink-2)] transition-colors hover:bg-[var(--grid)] hover:text-[var(--ink)]"
+              >
+                {link.label}
+                <ArrowUpRight size={14} />
+              </a>
             ))}
-          </code>
-        </pre>
+          </div>
+        </div>
+
+        <dl className="animate-fade grid grid-cols-3 gap-4 border-t border-[var(--hairline)] pt-5 [animation-delay:200ms]">
+          {[
+            { icon: <Grid size={14} />, label: "Scrips", value: count(scrips) },
+            { icon: <TrendUp size={14} />, label: "Turnover", value: `${turnover(totalTurnover)}` },
+            {
+              icon: <Layers size={14} />,
+              label: "Session",
+              value: sessionDate(market.date),
+            },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <dt className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                {stat.icon}
+                {stat.label}
+              </dt>
+              <dd className="tabular mt-1 text-base font-semibold">{stat.value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
-      {/*
-        The result panel. It is the same shape a consumer gets back, and it fills in as
-        though the code beside it had just run.
-      */}
-      {/*
-        `self-start` so the panel is its own height. Left to stretch it fills the column
-        and the leftover becomes a bordered field of nothing under the last row, which
-        reads as content that failed to load.
-      */}
-      <div className="animate-fade flex min-w-0 flex-col gap-3 self-start rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-4 [animation-delay:220ms] sm:p-5">
-        <div className="flex items-baseline justify-between gap-3">
-          <div>
-            <p className="text-xs text-[var(--muted)]">Session</p>
-            <p className="text-sm font-medium">{sessionDate(market.date)}</p>
-          </div>
-          <p className="text-xs text-[var(--muted)]">equal-weighted · end of day</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-[var(--hairline)] p-3">
-            <p className="text-xs text-[var(--muted)]">Scrips</p>
-            {/* Proportional figures, not tabular: a display-size number set in
-                equal-width digits looks loose. */}
-            <p className="mt-0.5 text-2xl font-semibold">{Math.round(scrips)}</p>
-          </div>
-          <div className="rounded-lg border border-[var(--hairline)] p-3">
-            <p className="text-xs text-[var(--muted)]">Turnover</p>
-            <p className="mt-0.5 text-2xl font-semibold">
-              {(turnover / 10_000_000).toFixed(1)}
-              <span className="ml-1 text-sm font-normal text-[var(--muted)]">Cr</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-lg border border-[var(--hairline)]">
-          <table className="w-full text-sm">
-            <caption className="sr-only">
-              The five most traded scrips for the {sessionDate(market.date)} session
-            </caption>
-            <tbody>
-              {busiest.map((row, index) => (
-                <tr
-                  key={row.symbol}
-                  className="animate-rise border-b border-[var(--hairline)] last:border-0"
-                  style={{ animationDelay: `${300 + index * 70}ms` }}
-                >
-                  <td className="px-3 py-2">
-                    <span className="font-medium">{row.symbol}</span>
-                    {row.name !== null && (
-                      <span className="block max-w-[14rem] truncate text-xs text-[var(--muted)]">
-                        {row.name}
-                      </span>
-                    )}
-                  </td>
-                  <td className="tabular px-3 py-2 text-right">{price(row.close)}</td>
-                  {/*
-                    The sign is always present. Colour is the second channel here, never
-                    the only one, which is what lets the green/red pair through: a
-                    reader who cannot separate the hues still reads + and −.
-                  */}
-                  <td className={`tabular px-3 py-2 text-right ${changeColor(row.change)}`}>
-                    {signed(row.change)}
-                    <span className="block text-xs opacity-80">{percent(row.changePercent)}</span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <p className="text-xs text-[var(--muted)]">
-          Four requests: the index, two sessions, and the ticker directory.
-        </p>
-      </div>
+      <Terminal
+        className="animate-fade [animation-delay:180ms]"
+        title="@srijankarki44/nepse-data — node"
+        lines={transcriptFor(market)}
+      />
     </section>
   );
 }

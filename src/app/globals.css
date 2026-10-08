@@ -214,6 +214,17 @@ body {
     }
   }
 
+  @keyframes blink {
+    0%,
+    49% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+
   .animate-rise {
     animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -231,14 +242,74 @@ body {
     stroke-dasharray: var(--dash);
     animation: draw 1.6s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
+
+  /**
+   * The terminal, revealed rather than typed by script.
+   *
+   * Every line is in the DOM from the first paint, so the text is real: selectable,
+   * copyable, and read by a screen reader in full. What animates is only how it appears.
+   * The command types itself by clipping a monospace line, which is the one trick that
+   * needs no JavaScript at all, and the output lines fade in behind it.
+   *
+   * `steps(var(--chars))` is what makes it read as typing rather than as a wipe: the width
+   * advances one character cell at a time, and the cell is exactly one character because
+   * the font is monospace.
+   */
+  .terminal-command {
+    display: inline-block;
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    animation-name: type;
+    animation-timing-function: steps(var(--chars), end);
+    animation-fill-mode: forwards;
+  }
+
+  .terminal-out {
+    opacity: 0;
+    animation: fade 0.35s ease-out forwards;
+  }
+
+  .terminal-caret {
+    display: inline-block;
+    width: 0.6em;
+    animation: blink 1.05s step-end infinite;
+  }
+
+  @keyframes type {
+    from {
+      width: 0;
+    }
+    to {
+      width: calc(var(--chars) * 1ch);
+    }
+  }
 }
 
+/**
+ * Under reduced motion the terminal shows its finished state: commands unclipped, output
+ * visible, no caret. It is the same transcript either way, which is the point of keeping
+ * the text in the document rather than generating it.
+ */
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
   .animate-fade,
   .animate-wipe,
   .animate-draw {
     animation: none;
+  }
+
+  .terminal-command {
+    width: auto;
+  }
+
+  .terminal-out {
+    opacity: 1;
+  }
+
+  .terminal-caret {
+    display: none;
   }
 }
 

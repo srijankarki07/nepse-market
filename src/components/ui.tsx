@@ -25,7 +25,7 @@
 
 import type { ReactNode } from "react";
 
-import { percent, signed } from "@/lib/format";
+import { percent } from "@/lib/format";
 
 /* -------------------------------------------------------------------------- avatars */
 
@@ -152,20 +152,26 @@ export function Sparkline({
 
 /* ---------------------------------------------------------------------------- chips */
 
-/** A signed change in a tinted chip. The sign is always drawn, never colour alone. */
+/**
+ * A change in a tinted chip.
+ *
+ * It takes the **percentage**, not the absolute change. Those are different numbers and the
+ * chip is the percent column: passing the absolute change prints a scrip that fell from
+ * 49,000 to 48,000 as "-1000.00%", which is what this looked like before it was caught on
+ * screen. The sign is always drawn, so colour is never the only channel.
+ */
 export function Chip({
-  change,
-  showPercent = true,
+  changePercent,
   size = "md",
   className = "",
 }: {
-  change: number | null;
-  showPercent?: boolean;
+  changePercent: number | null;
   size?: "sm" | "md";
   className?: string;
 }) {
+  const change = changePercent;
   const tone = change === null || change === 0 ? "var(--flat)" : change > 0 ? "var(--up)" : "var(--down)";
-  const text = showPercent ? percent(change) : signed(change);
+  const text = percent(change);
 
   return (
     <span
@@ -237,28 +243,55 @@ export function Segmented<T extends string | number>({
 
 /* ---------------------------------------------------------------------- stat tiles */
 
+/**
+ * A labelled figure.
+ *
+ * `tone` tints both the figure and the card, which is how a row of these reads as a market
+ * summary rather than as six unrelated numbers. It is a second channel throughout: the
+ * label says what the figure is, so the tint is never the only thing distinguishing
+ * "Advanced" from "Declined".
+ */
 export function StatTile({
   icon,
   label,
   value,
   note,
+  tone = "neutral",
   className = "",
 }: {
   icon?: ReactNode;
   label: string;
   value: ReactNode;
   note?: ReactNode;
+  tone?: "up" | "down" | "flat" | "neutral" | "accent";
   className?: string;
 }) {
+  const ink =
+    tone === "up"
+      ? "var(--up)"
+      : tone === "down"
+        ? "var(--down)"
+        : tone === "accent"
+          ? "var(--accent)"
+          : "var(--ink)";
+
+  // Tinted by mixing into the surface, the same expression the avatars use, so one rule
+  // works in both themes without a second set of tokens.
+  const background =
+    tone === "neutral" ? "var(--surface)" : `color-mix(in oklab, ${ink} 8%, var(--surface))`;
+
   return (
     <div
-      className={`flex flex-col gap-2 rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-4 ${className}`}
+      className={`flex flex-col gap-1.5 rounded-xl border border-[var(--hairline)] p-4 ${className}`}
+      style={{ background }}
     >
       <div className="flex items-center gap-2 text-[var(--muted)]">
         {icon}
         <span className="text-xs">{label}</span>
       </div>
-      <p className="tabular text-xl font-semibold tracking-tight">{value}</p>
+      <p className="tabular text-xl font-semibold tracking-tight" style={{ color: ink }}>
+        {value}
+      </p>
       {note !== undefined && <p className="text-xs text-[var(--muted)]">{note}</p>}
     </div>
   );
