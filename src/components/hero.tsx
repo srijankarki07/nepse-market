@@ -25,6 +25,7 @@ import Link from "next/link";
 
 import { Terminal, type TerminalLine, type TerminalSpan } from "@/components/terminal";
 import { ArrowUpRight, Grid, Layers, TrendUp } from "@/components/icons";
+import { Skeleton } from "@/components/ui";
 import { count, percent, price, sessionDate, signed, turnover } from "@/lib/format";
 import type { Market } from "@/lib/market";
 import { useCountUp } from "@/hooks/use-count-up";
@@ -182,10 +183,24 @@ function InstallLine() {
   );
 }
 
-export function Hero({ market }: { market: Market }) {
-  const scrips = useCountUp(market.rows.length);
+/**
+ * The hero, with or without the session behind it.
+ *
+ * The copy is fixed and the figures are not, so the two are separated: the headline, the
+ * standfirst, the install line, the two buttons and the terminal's chrome are drawn on the
+ * first paint, and only the three figures and the transcript wait for the archive. A reader
+ * arriving on a cold cache gets the page rather than a grey rectangle the size of the page.
+ *
+ * `market` is optional for exactly that reason. Passing `undefined` is not an error state,
+ * it is the state the page is in for the first few hundred milliseconds.
+ */
+export function Hero({ market }: { market: Market | undefined }) {
+  // Zero rather than a skipped call, because the hooks are unconditional. `useCountUp`
+  // re-runs when its target changes, so the figure counts up from nothing when the session
+  // lands, which is the same arrival the rest of the hero gets.
+  const scrips = useCountUp(market?.rows.length ?? 0);
   const totalTurnover = useCountUp(
-    market.rows.reduce((total, row) => total + (row.turnover ?? 0), 0),
+    market?.rows.reduce((total, row) => total + (row.turnover ?? 0), 0) ?? 0,
     { durationMs: 1100 },
   );
 
@@ -194,7 +209,7 @@ export function Hero({ market }: { market: Market }) {
    * memoises its timings on this array, so a new one each render would restart the whole
    * animation every time anything on the page re-rendered, including the two count-ups.
    */
-  const transcript = useMemo(() => transcriptFor(market), [market]);
+  const transcript = useMemo(() => (market === undefined ? null : transcriptFor(market)), [market]);
 
   return (
     <section className="hero-wash flex flex-col items-center gap-10">
@@ -220,9 +235,14 @@ export function Hero({ market }: { market: Market }) {
         </h1>
 
         <p className="animate-rise max-w-prose text-base text-[var(--ink-2)] [animation-delay:60ms]">
-          {count(market.sessionsInArchive)} sessions of end-of-day prices, served from a public
-          archive that maintains itself. No API key, no server, no rate limit, and no data in the
-          package, so it is current the moment you run it.
+          {market === undefined ? (
+            <Skeleton className="h-4 w-9 align-middle" />
+          ) : (
+            count(market.sessionsInArchive)
+          )}{" "}
+          sessions of end-of-day prices, served from a public archive that maintains itself. No
+          API key, no server, no rate limit, and no data in the package, so it is current the
+          moment you run it.
         </p>
 
         <div className="animate-rise flex w-full flex-col items-center gap-3 [animation-delay:120ms]">
@@ -259,12 +279,22 @@ export function Hero({ market }: { market: Market }) {
         */}
         <dl className="animate-fade grid w-full grid-cols-3 gap-4 border-t border-[var(--hairline)] pt-6 [animation-delay:200ms]">
           {[
-            { icon: <Grid size={14} />, label: "Scrips traded", value: count(scrips) },
-            { icon: <TrendUp size={14} />, label: "Turnover", value: `${turnover(totalTurnover)}` },
+            {
+              icon: <Grid size={14} />,
+              label: "Scrips traded",
+              value: market === undefined ? <Skeleton className="h-8 w-16" /> : count(scrips),
+            },
+            {
+              icon: <TrendUp size={14} />,
+              label: "Turnover",
+              value:
+                market === undefined ? <Skeleton className="h-8 w-24" /> : turnover(totalTurnover),
+            },
             {
               icon: <Layers size={14} />,
               label: "Session",
-              value: sessionDate(market.date),
+              value:
+                market === undefined ? <Skeleton className="h-8 w-28" /> : sessionDate(market.date),
             },
           ].map((stat) => (
             <div key={stat.label}>

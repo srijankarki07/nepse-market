@@ -33,6 +33,8 @@
 
 import { useEffect, useMemo, useRef } from "react";
 
+import { Skeleton } from "./ui";
+
 /**
  * The shell prompt and the REPL prompt, which are not the same character.
  *
@@ -72,7 +74,11 @@ export interface TerminalSpan {
 export type LineText = string | readonly TerminalSpan[];
 
 export type TerminalLine =
-  | { readonly kind: "command"; readonly text: LineText; readonly prompt?: TerminalPrompt }
+  | {
+      readonly kind: "command";
+      readonly text: LineText;
+      readonly prompt?: TerminalPrompt;
+    }
   | { readonly kind: "output"; readonly text: LineText }
   | { readonly kind: "blank" };
 
@@ -122,7 +128,8 @@ const BLANK = 220;
 
 /** How long a line occupies the transcript, which is also the delay before the next one. */
 function durationOf(line: TerminalLine): number {
-  if (line.kind === "command") return textOf(line.text).length * PER_CHAR + AFTER_COMMAND;
+  if (line.kind === "command")
+    return textOf(line.text).length * PER_CHAR + AFTER_COMMAND;
   if (line.kind === "output") return BETWEEN_OUTPUTS;
   return BLANK;
 }
@@ -138,7 +145,15 @@ export function Terminal({
   className = "",
 }: {
   title: string;
-  lines: readonly TerminalLine[];
+  /**
+   * The transcript, or `null` while the session it describes is still being read.
+   *
+   * `null` rather than an empty array, because the two mean different things here: an empty
+   * transcript is a window with nothing in it, and a missing one is a window waiting for
+   * figures it cannot invent. The chrome is drawn either way, so the hero does not change
+   * size when the data lands.
+   */
+  lines: readonly TerminalLine[] | null;
   className?: string;
 }) {
   /*
@@ -153,7 +168,7 @@ export function Terminal({
    */
   const timed = useMemo(
     () =>
-      lines
+      (lines ?? [])
         .reduce<{ at: number; rows: { line: TerminalLine; start: number }[] }>(
           (state, line) => ({
             at: state.at + durationOf(line),
@@ -186,7 +201,9 @@ export function Terminal({
      * nothing is actually out of view.
      */
     const container = body.getBoundingClientRect();
-    const lastLine = [...lineRefs.current].reverse().find((line) => line !== null);
+    const lastLine = [...lineRefs.current]
+      .reverse()
+      .find((line) => line !== null);
     if (lastLine === null || lastLine === undefined) return;
 
     const textBottom =
@@ -231,7 +248,8 @@ export function Terminal({
           // Only ever scrolls down, and only as far as it must. Scrolling the element into
           // view by the browser's own means would also move the page, which on a hero is
           // the whole viewport.
-          if (below > 0) body.scrollTo({ top: body.scrollTop + below, behavior: "smooth" });
+          if (below > 0)
+            body.scrollTo({ top: body.scrollTop + below, behavior: "smooth" });
         },
         start + typingDuration(timed[index]?.line ?? { kind: "blank" }),
       ),
@@ -244,7 +262,12 @@ export function Terminal({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-xl border border-[var(--hairline)] bg-[var(--surface)] ${className}`}
+      // The edge comes from a token rather than a `dark:` variant, and that is the repo's
+      // rule rather than a preference: `dark:` follows `prefers-color-scheme` only, so a
+      // reader on a dark machine who has explicitly chosen the light theme would get this
+      // border removed from the light theme. The token is set in both arms of both dark
+      // blocks, which is what makes the two agree.
+      className={`relative overflow-hidden rounded-xl border border-[var(--terminal-edge)] bg-[var(--surface)] ${className}`}
     >
       <div className="flex items-center gap-2 border-b border-[var(--hairline)] px-4 py-2.5">
         <span aria-hidden="true" className="flex gap-1.5">
@@ -252,7 +275,9 @@ export function Terminal({
           <span className="size-2.5 rounded-full bg-[var(--flat)] opacity-50" />
           <span className="size-2.5 rounded-full bg-[var(--up)] opacity-60" />
         </span>
-        <p className="truncate font-mono text-[11px] text-[var(--muted)]">{title}</p>
+        <p className="truncate font-mono text-[11px] text-[var(--muted)]">
+          {title}
+        </p>
       </div>
 
       {/* The window. A fixed height, a soft bottom edge, and scrolling if the transcript
@@ -267,6 +292,17 @@ export function Terminal({
           fade, so without room to scroll past it the final line of the transcript would be
           permanently dimmed. The padding is what the window scrolls into.
         */}
+        {lines === null ? (
+          /*
+           * The window before the session exists. Ragged widths rather than equal bars,
+           * because a transcript is ragged and this is standing in for one.
+           */
+          <div className="space-y-3 px-4 py-4">
+            {["w-3/5", "w-2/5", "w-4/5", "w-1/2", "w-11/12", "w-1/3"].map((width) => (
+              <Skeleton key={width} className={`block h-4 ${width}`} />
+            ))}
+          </div>
+        ) : (
         <pre className="w-max min-w-full px-4 pt-4 pb-24 font-mono text-[12.5px] leading-relaxed">
           <code>
             {timed.map(({ line, start, key }) => {
@@ -317,7 +353,12 @@ export function Terminal({
                       }
                     >
                       {spansOf(line.text).map((span, at) => (
-                        <span key={at} className={span.tone === undefined ? "" : TONE[span.tone]}>
+                        <span
+                          key={at}
+                          className={
+                            span.tone === undefined ? "" : TONE[span.tone]
+                          }
+                        >
                           {span.text}
                         </span>
                       ))}
@@ -353,7 +394,10 @@ export function Terminal({
                   style={{ animationDelay: `${start}ms` }}
                 >
                   {spansOf(line.text).map((span, at) => (
-                    <span key={at} className={span.tone === undefined ? "" : TONE[span.tone]}>
+                    <span
+                      key={at}
+                      className={span.tone === undefined ? "" : TONE[span.tone]}
+                    >
                       {span.text}
                     </span>
                   ))}
@@ -362,6 +406,7 @@ export function Terminal({
             })}
           </code>
         </pre>
+        )}
       </div>
 
       {/* The window's bottom edge, dissolving into the page. See `.terminal-blend`. */}

@@ -27,6 +27,35 @@ import { useState, type ReactNode } from "react";
 
 import { percent, price, sessionDate } from "@/lib/format";
 
+/* ------------------------------------------------------------------------ placeholders */
+
+/**
+ * A placeholder for a figure that has not arrived.
+ *
+ * ## One shape, sized by the caller
+ *
+ * There is no bespoke skeleton per card. What matters is that the space a figure will
+ * occupy is reserved before it gets there, so nothing on the page moves when it lands; the
+ * exact silhouette is decoration on top of that.
+ *
+ * ## A span, not a div
+ *
+ * Because it is used inside the `<p>` a card's `note` renders into as well as inside blocks
+ * of its own, and a `div` in a `p` is invalid and gets hoisted out by the parser, which
+ * would put the placeholder in the wrong place rather than merely being wrong on paper.
+ *
+ * `aria-hidden` so a screen reader is not read a row of empty boxes, and the region that
+ * owns it carries the busy state.
+ */
+export function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block animate-pulse rounded bg-[var(--grid)] ${className}`}
+    />
+  );
+}
+
 /* -------------------------------------------------------------------------- avatars */
 
 /**
