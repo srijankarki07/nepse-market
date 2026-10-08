@@ -182,9 +182,12 @@ export function MarketTable({
                 </th>
               ))}
               {trends !== undefined && (
-                <th scope="col" className="px-4 py-3 text-right font-medium text-[var(--ink-2)]">
-                  <span className="sr-only">Seven-day trend</span>
-                  <span aria-hidden="true">7d</span>
+                <th
+                  scope="col"
+                  aria-label="Seven-day trend"
+                  className="px-4 py-3 text-right font-medium text-[var(--ink-2)]"
+                >
+                  7d
                 </th>
               )}
             </tr>

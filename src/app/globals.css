@@ -329,7 +329,7 @@ body {
 .hero-wash::before {
   content: "";
   position: absolute;
-  inset: 0 -2rem auto -2rem;
+  inset: 0 auto;
   height: 30rem;
   z-index: -1;
   pointer-events: none;
