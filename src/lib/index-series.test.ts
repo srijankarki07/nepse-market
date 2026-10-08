@@ -6,16 +6,23 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { Quote, Session } from "@srijankarki44/nepse-data";
+import type { DatedCloses } from "@srijankarki44/nepse-data";
 
 import { computeMarketIndex, indexExtremes, meanRatio } from "./index-series";
 
-function q(symbol: string, close: number | null): Quote {
-  return { symbol, open: null, high: null, low: null, close, volume: null, turnover: null };
-}
-
-function s(date: string, rows: Array<[string, number | null]>): Session {
-  return { date, rows: rows.map(([symbol, close]) => q(symbol, close)) };
+/**
+ * One day's closes, in the shape the archive publishes them: a null close is simply absent,
+ * because a scrip with no close has no ratio against the previous day.
+ */
+function s(date: string, rows: Array<[string, number | null]>): DatedCloses {
+  return {
+    date,
+    closes: new Map(
+      rows.flatMap(([symbol, close]) =>
+        close === null ? [] : [[symbol, close] as [string, number]],
+      ),
+    ),
+  };
 }
 
 describe("meanRatio", () => {

@@ -69,8 +69,10 @@ export function MarketView() {
       const to = market.data?.date;
       if (to === undefined) throw new Error("No session to measure from.");
 
-      const sessions = await nepse().sessions({ from: rangeStart(to, indexDays), to });
-      return computeMarketIndex(sessions);
+      // One request per calendar year, rather than one per trading day: the closes index is
+      // wide, so a year of the whole market is a single ~450 KB file.
+      const days = await nepse().closes({ from: rangeStart(to, indexDays), to });
+      return computeMarketIndex(days);
     },
   });
 
