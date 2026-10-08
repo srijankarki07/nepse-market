@@ -30,7 +30,7 @@
  * plateau.
  */
 
-import type { Session } from "@srijankarki44/nepse-data";
+import type { DatedCloses } from "@srijankarki44/nepse-data";
 
 export interface IndexPoint {
   date: string;
@@ -46,25 +46,21 @@ export interface MarketIndex {
   changePercent: number | null;
 }
 
-/** The closes in one session, keyed by ticker. Scrips with no close are omitted. */
-function closesOf(session: Session): Map<string, number> {
-  const closes = new Map<string, number>();
-  for (const row of session.rows) {
-    if (row.close !== null) closes.set(row.symbol, row.close);
-  }
-  return closes;
-}
-
 /**
  * The mean day-on-day ratio between two sessions, or `null` when they share no scrip.
  *
  * Ratio-of-means is deliberately avoided: it would weight a scrip trading at 10,000 the
  * same as one at 100 by price, which is not what "equal-weighted" means. This is the mean
  * of the ratios, which weights each *scrip* equally.
+ *
+ * It reads `DatedCloses` rather than a whole `Session`, because the archive publishes a year
+ * of closes as one wide file and this needs nothing else from a day: a scrip that did not
+ * trade, or published no close, is absent from the map, which is exactly the population this
+ * arithmetic must skip.
  */
-export function meanRatio(previous: Session, current: Session): number | null {
-  const before = closesOf(previous);
-  const now = closesOf(current);
+export function meanRatio(previous: DatedCloses, current: DatedCloses): number | null {
+  const before = previous.closes;
+  const now = current.closes;
 
   let total = 0;
   let counted = 0;
@@ -83,14 +79,14 @@ export function meanRatio(previous: Session, current: Session): number | null {
 }
 
 /** The equal-weighted index across a run of sessions, ascending by date. */
-export function computeMarketIndex(sessions: readonly Session[]): MarketIndex {
-  const ordered = [...sessions].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+export function computeMarketIndex(days: readonly DatedCloses[]): MarketIndex {
+  const ordered = [...days].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
 
   const first = ordered[0];
   if (first === undefined) return { points: [], changePercent: null };
 
   const points: IndexPoint[] = [
-    { date: first.date, value: 100, constituents: closesOf(first).size },
+    { date: first.date, value: 100, constituents: first.closes.size },
   ];
 
   let level = 100;
@@ -117,7 +113,7 @@ export function computeMarketIndex(sessions: readonly Session[]): MarketIndex {
     points.push({
       date: current.date,
       value: Number(level.toFixed(4)),
-      constituents: closesOf(current).size,
+      constituents: current.closes.size,
     });
   }
 
