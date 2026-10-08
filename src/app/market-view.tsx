@@ -40,6 +40,7 @@ import { Hero } from "@/components/hero";
 import { Activity, Banknote, Grid, Layers } from "@/components/icons";
 import { IndexChart, IndexTable } from "@/components/index-chart";
 import { MarketTable } from "@/components/market-table";
+import { IndexRail } from "@/components/index-rail";
 import { Segmented, SectionHeading, StatTile, type TrendPoint } from "@/components/ui";
 import { count, sessionDate, turnover, volume } from "@/lib/format";
 import { computeMarketIndex } from "@/lib/index-series";
@@ -74,6 +75,19 @@ export function MarketView() {
       const days = await nepse().closes({ from: rangeStart(to, indexDays), to });
       return computeMarketIndex(days);
     },
+  });
+
+  /**
+   * The exchange's own index levels.
+   *
+   * Absent on any archive that predates the artifact, where `indices()` answers an empty
+   * array rather than throwing, so the rail hides itself and the computed index above is
+   * the only one shown. That is the documented fallback, not a degraded state.
+   */
+  const levels = useQuery({
+    queryKey: ["indices", market.data?.date],
+    enabled: market.data !== undefined,
+    queryFn: () => nepse().indices(),
   });
 
   const trends = useQuery({
@@ -205,6 +219,30 @@ export function MarketView() {
           />
         </div>
       </section>
+
+      {/*
+        The exchange's levels, when the archive publishes them.
+
+        Rendered only when there is something to render: an archive predating the artifact
+        gives an empty array, and an empty rail under a heading is worse than no heading.
+      */}
+      {levels.data !== undefined && levels.data.length > 0 && (
+        <section className="space-y-5">
+          <SectionHeading
+            eyebrow="Major indices"
+            title="The exchange's own levels"
+            note={
+              <>
+                NEPSE&rsquo;s published indices, not a computed one. The equal-weighted index
+                above is this site&rsquo;s arithmetic over the same sessions, which is why
+                the two are described separately rather than shown as one row.
+              </>
+            }
+          />
+
+          <IndexRail levels={levels.data} />
+        </section>
+      )}
 
       {/* Movers first, grouped because they are the same shape and so the same height. */}
       <section className="grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-4">
