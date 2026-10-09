@@ -65,7 +65,7 @@ const EXCHANGE_ROWS = [
   ],
   ["Is it NEPSE's?", "Yes. These are the exchange's own figures."],
   ["How far back", "From October 2026, when the archive began recording them."],
-  ["Where you see it", "The Major indices rail."],
+  ["Where you see it", "The Major indices grid."],
 ] as const;
 
 export default function AboutPage() {
