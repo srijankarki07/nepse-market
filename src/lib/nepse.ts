@@ -40,6 +40,7 @@ export function nepse(): NepseDataClient {
  * long-horizon view rather than something anyone reads intraday.
  */
 export const RANGES = [
+  { key: "1w", label: "1W", days: 7 },
   { key: "1m", label: "1M", days: 30 },
   { key: "3m", label: "3M", days: 90 },
   { key: "6m", label: "6M", days: 180 },

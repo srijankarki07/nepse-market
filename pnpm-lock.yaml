@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@srijankarki44/nepse-data':
-        specifier: ^0.2.1
-        version: 0.2.1
+        specifier: ^0.3.0
+        version: 0.3.0
       '@tanstack/react-query':
         specifier: ^5.104.0
         version: 5.104.0(react@19.2.8)
@@ -642,8 +642,8 @@ packages:
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
-  '@srijankarki44/nepse-data@0.2.1':
-    resolution: {integrity: sha512-u9GFSV2lYOezqyXdbGG7t0AuNEVHlUsmIU9hJsg04h7cPJ2mY+MV8AZN5FRXDKYBCiecARDCJdRENmwo//9q6Q==}
+  '@srijankarki44/nepse-data@0.3.0':
+    resolution: {integrity: sha512-tmXBhQJKpPDL3rImYup7XLctoN09MT+rOmr5s/ZWAXayeSZ80GUzn7QtYAiwv/rmALY9G763vL+Y9B6K/Wr0+w==}
     engines: {node: '>=20.11'}
 
   '@standard-schema/spec@1.1.0':
@@ -3173,7 +3173,7 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
-  '@srijankarki44/nepse-data@0.2.1': {}
+  '@srijankarki44/nepse-data@0.3.0': {}
 
   '@standard-schema/spec@1.1.0': {}
 

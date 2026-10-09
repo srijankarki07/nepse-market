@@ -52,7 +52,10 @@ export function ThemeToggle() {
       // a screen reader user needs to hear before activating it.
       aria-label="Switch between light and dark"
       title="Switch between light and dark"
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--ink-2)] transition-colors hover:bg-[var(--grid)] focus-visible:outline focus-visible:outline-1 focus-visible:outline-[var(--axis)]"
+      // No focus utility of its own. The global `:focus-visible` rule in globals.css draws
+      // this site's one ring, and this button's private one, in `--axis` rather than
+      // `--accent`, was the only ring on the page. That is what made the audit necessary.
+      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--ink-2)] transition-colors hover:bg-[var(--grid)]"
     >
       <SunIcon />
       <MoonIcon />

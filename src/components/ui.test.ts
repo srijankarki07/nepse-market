@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { hueFor, monogramFor, sparkPath } from "./ui";
+import { hueFor, monogramFor, nearestIndex, sparkPath } from "./ui";
 
 describe("hueFor", () => {
   it("stays in the cool half of the wheel, clear of the up and down hues", () => {
@@ -92,5 +92,36 @@ describe("sparkPath", () => {
       expect(y).toBeGreaterThanOrEqual(0);
       expect(y).toBeLessThanOrEqual(24);
     }
+  });
+});
+
+describe("nearestIndex", () => {
+  // The inverse of the mapping sparkPath draws with, so the dot lands on the point the
+  // tooltip describes. Off by one here reports the neighbouring session's close, which is
+  // a wrong number that looks like a right one.
+  const WIDTH = 76;
+
+  it("has nothing to point at when there are no points", () => {
+    expect(nearestIndex(0, 10, WIDTH)).toBe(-1);
+  });
+
+  it("points at the only point there is", () => {
+    expect(nearestIndex(1, 40, WIDTH)).toBe(0);
+  });
+
+  it("maps the two ends to the first and last points", () => {
+    expect(nearestIndex(7, 1.5, WIDTH)).toBe(0);
+    expect(nearestIndex(7, WIDTH - 1.5, WIDTH)).toBe(6);
+  });
+
+  it("picks the closest point in between", () => {
+    // Seven points across 73 usable pixels, so one every ~12.2.
+    expect(nearestIndex(7, 1.5 + 12.2, WIDTH)).toBe(1);
+    expect(nearestIndex(7, 1.5 + 36.5, WIDTH)).toBe(3);
+  });
+
+  it("clamps a pointer that has left the box", () => {
+    expect(nearestIndex(7, -50, WIDTH)).toBe(0);
+    expect(nearestIndex(7, 500, WIDTH)).toBe(6);
   });
 });

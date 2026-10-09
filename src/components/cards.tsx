@@ -19,7 +19,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { changeColor, count, percent, signed } from "@/lib/format";
+import { Avatar, Chip } from "@/components/ui";
+import { count, percent } from "@/lib/format";
 import type { MarketRow } from "@/lib/market";
 
 /** Which family of question a card answers. Drives the accent, nothing else. */
@@ -88,13 +89,16 @@ export function ScripList({
       {rows.map((row) => (
         <li
           key={row.symbol}
-          className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+          className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
         >
+          {/* The mark is what makes a list of tickers scannable, which is why every
+              reference puts one in the first column. */}
+          <Avatar symbol={row.symbol} size={30} />
           <Link
             href={`/symbol/?t=${encodeURIComponent(row.symbol)}`}
             className="min-w-0 flex-1 hover:underline"
           >
-            <span className="text-sm font-medium">{row.symbol}</span>
+            <span className="font-mono text-sm font-semibold">{row.symbol}</span>
             {row.name !== null && (
               <span className="block truncate text-xs text-[var(--muted)]">{row.name}</span>
             )}
@@ -106,14 +110,14 @@ export function ScripList({
   );
 }
 
-/** The day change, signed and coloured. The sign carries it; colour is the second channel. */
+/**
+ * The day change, as a chip.
+ *
+ * A chip rather than bare coloured text because it gives the figure a fixed place to sit in
+ * a column, which is what the references rely on to make a table of changes readable.
+ */
 export function Change({ row }: { row: MarketRow }) {
-  return (
-    <span className={changeColor(row.change)}>
-      {signed(row.change)}
-      <span className="block text-xs opacity-80">{percent(row.changePercent)}</span>
-    </span>
-  );
+  return <Chip changePercent={row.changePercent} />;
 }
 
 /**
@@ -178,7 +182,13 @@ export function Breadth({
 }
 
 function Figure({ label, value, tone }: { label: string; value: number; tone: "up" | "down" | "flat" }) {
-  const colour = tone === "up" ? "var(--up)" : tone === "down" ? "var(--down)" : "var(--flat)";
+  // The `-ink` tokens, matching `StatTile`, which draws the same "how many advanced"
+  // figure on the front page. They are the same measurement and should not be two shades
+  // of green depending on which card a reader is looking at. At 24px this only has to
+  // clear 3:1, which the mark colour does, but the ink one clears 6.66 and agreeing with
+  // the tile beside it is worth more than the difference.
+  const colour =
+    tone === "up" ? "var(--up-ink)" : tone === "down" ? "var(--down-ink)" : "var(--flat-ink)";
 
   return (
     <div>
@@ -220,7 +230,14 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
 
   return (
     <div className="space-y-3">
-      <div className="flex h-32 items-end gap-1">
+      {/*
+        `list` and `listitem` rather than plain divs, which is what Lighthouse was failing
+        on. `aria-label` is prohibited on an element whose role is `generic`, and each
+        column carries one so that a keyboard user tabbing the chart hears the year and its
+        count. Naming the bars as a list is also the honest description: sixteen labelled
+        values, which is what they are.
+      */}
+      <div role="list" className="flex h-32 items-end gap-1">
         {entries.map(([year, sessions]) => {
           const complete = sessions >= fullYear * 0.85;
           const note = notable.get(year);
@@ -229,9 +246,16 @@ export function CoverageColumns({ years }: { years: Record<string, number> }) {
             // `group` plus a positioned child gives the tooltip without any state, and
             // `tabIndex` on the column means the same information arrives on keyboard
             // focus rather than only on hover.
+            //
+            // The outline is no longer suppressed here. It was, on the grounds that the
+            // tooltip said everything the ring would; the tooltip says what the column is
+            // but not that the column is what has focus, and a keyboard user tabbing
+            // through the chart needs the second. The global `:focus-visible` rule draws it
+            // and the tooltip still opens beside it.
             <div
               key={year}
-              className="group relative flex h-full flex-1 flex-col justify-end focus:outline-none"
+              role="listitem"
+              className="group relative flex h-full flex-1 flex-col justify-end rounded-sm"
               tabIndex={0}
               aria-label={`${year}: ${sessions} sessions${note === undefined ? "" : `, shortened by ${note}`}`}
             >

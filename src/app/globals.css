@@ -41,6 +41,34 @@
  * a link. It is the third role in the palette and it deliberately overlaps none of the
  * others, so a colour on this page always means exactly one of three things: direction
  * (up/down), magnitude (the sequential ramp), or "you can touch this".
+ *
+ * ## Why there are `--up-ink` colours as well as `--up` colours
+ *
+ * Because in the light theme one colour cannot do both jobs, and that is a measurement
+ * rather than a preference.
+ *
+ * A **mark** (a chart line, a tint, a bar) has to be separable from the *other* direction:
+ * that is the deuteranope ΔE of 15.9 above, and it is bought by pairing a bright green with
+ * a deep red so **lightness** separates them where hue cannot. A **piece of text** has to be
+ * legible against its own background: 4.5:1, which the bright green misses at 3.27 on the
+ * light surface and 2.71 on its own chip tint.
+ *
+ * The obvious fix, darkening `--up`, breaks the first job to do the second. Measured: the
+ * lightest green that reaches 4.5:1 everywhere drops the pair's separation to **ΔE 5.2**,
+ * from 20.9 today, and the floor this palette was validated against is 8. A reader who
+ * cannot separate red from green would then be looking at two dark colours.
+ *
+ * So the two jobs get two tokens. `--up` and `--down` stay the validated pair and are used
+ * for every mark; `--up-ink` and `--down-ink` are used wherever the direction is *written*.
+ * Where the direction is written it is also **signed** (`+`/`−`), so the colour is the
+ * second channel there and its separation from the other direction is not load-bearing.
+ *
+ * The dark theme satisfies both jobs with one colour (11.04 and 6.19 against its surface),
+ * so there the ink tokens alias the marks. The split exists for the light theme and costs
+ * the dark theme nothing.
+ *
+ * `--muted` moved from #898781 to #686660 for the same reason: it is only ever text, at
+ * 11-13px, and it measured 3.41 against the plane and 3.50 against the surface.
  */
 
 :root {
@@ -50,14 +78,35 @@
   --plane: #f9f9f7;
   --ink: #0b0b0b;
   --ink-2: #52514e;
-  --muted: #898781;
+  --muted: #686660;
   --grid: #e1e0d9;
   --axis: #c3c2b7;
   --hairline: rgba(11, 11, 11, 0.1);
 
+  /* The terminal window's edge, and the reason it is a token rather than `--hairline`.
+
+     A border has one job: separating the card from the page behind it. In the light theme
+     it is the only thing that does, because `--surface` (#fcfcfb) and `--plane` (#f9f9f7)
+     differ by three units per channel and a reader cannot see the boundary without it. In
+     the dark theme `--surface` (#132025) and `--plane` (#0b1418) are far enough apart that
+     the card is obvious on its own, so the border is a second line saying what the fill
+     already says, and it comes off.
+
+     Kept as a border of `transparent` rather than removed, so the box is the same size in
+     both themes and nothing shifts when a reader toggles.
+
+     This is the terminal's decision only. The same argument applies to every other card on
+     the site, and they have not been changed: one component at a time. */
+  --terminal-edge: var(--hairline);
+
   --up: #0ca30c;
   --down: #a30202;
   --flat: #898781;
+
+  /* The text-safe direction colours. See the note below `--accent`. */
+  --up-ink: #066a06;
+  --down-ink: #a30202;
+  --flat-ink: var(--muted);
 
   /* Interactive state. A deep cyan: far enough from the up-green to be told apart by a
      reader who cannot separate red from green, and dark enough to pass on white. */
@@ -72,12 +121,18 @@
   --seq-6: #256abf;
   --seq-7: #184f95;
 
-  /* Code highlighting in the hero. Its own slots, distinct from the data palette —
-     these colour syntax, not facts, and reusing a series hue would imply a relationship
-     that does not exist. */
+  /* Syntax highlighting in the hero's terminal. Its own slots, distinct from the data
+     palette — these colour syntax, not facts, and reusing a series hue would imply a
+     relationship that does not exist.
+
+     `--code-num` is deliberately absent. The numbers inside the transcript are the
+     archive's own figures, so they take `--up-ink` with every other figure on the site
+     rather than a syntax colour: they are data that happens to be inside a code sample,
+     not code that happens to look like data. */
   --code-kw: #6d28d9;
+  --code-fn: #1d4ed8;
   --code-str: #047857;
-  --code-cm: #898781;
+  --code-cm: #686660;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -93,12 +148,21 @@
     --axis: #2a3c43;
     --hairline: rgba(232, 241, 242, 0.1);
 
+    /* No edge on the terminal in the dark theme. */
+    --terminal-edge: transparent;
+
     --up: #a3e635;
     --down: #fb7185;
     --flat: #8a9ea3;
     --accent: #7dd3fc;
 
+    /* Both jobs are satisfied by one colour here, so the ink tokens alias the marks. */
+    --up-ink: var(--up);
+    --down-ink: var(--down);
+    --flat-ink: var(--flat);
+
     --code-kw: #c4b5fd;
+    --code-fn: #93c5fd;
     --code-str: #fdba74;
     --code-cm: #8a9ea3;
   }
@@ -122,12 +186,21 @@
   --axis: #2a3c43;
   --hairline: rgba(232, 241, 242, 0.1);
 
+  /* No edge on the terminal in the dark theme. */
+  --terminal-edge: transparent;
+
   --up: #a3e635;
   --down: #fb7185;
   --flat: #8a9ea3;
   --accent: #7dd3fc;
 
+  /* Both jobs are satisfied by one colour here, so the ink tokens alias the marks. */
+  --up-ink: var(--up);
+  --down-ink: var(--down);
+  --flat-ink: var(--flat);
+
   --code-kw: #c4b5fd;
+  --code-fn: #93c5fd;
   --code-str: #fdba74;
   --code-cm: #8a9ea3;
 }
@@ -141,13 +214,18 @@
   --color-grid: var(--grid);
   --color-axis: var(--axis);
   --color-hairline: var(--hairline);
+  --color-terminal-edge: var(--terminal-edge);
 
   --color-up: var(--up);
   --color-down: var(--down);
   --color-flat: var(--flat);
+  --color-up-ink: var(--up-ink);
+  --color-down-ink: var(--down-ink);
+  --color-flat-ink: var(--flat-ink);
   --color-accent: var(--accent);
 
   --color-code-kw: var(--code-kw);
+  --color-code-fn: var(--code-fn);
   --color-code-str: var(--code-str);
   --color-code-cm: var(--code-cm);
 
@@ -165,6 +243,123 @@ body {
    equal-width digits give them. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/**
+ * One focus ring for the whole site.
+ *
+ * ## Why this is global rather than a class on each control
+ *
+ * The audit that prompted it found exactly the failure this shape prevents: the theme
+ * toggle had a ring, the range buttons had **none at all**, and the coverage chart removed
+ * the browser's with `focus:outline-none`, so a keyboard user navigating the front page
+ * could see where they were on one control in ten. Styling focus per component means the
+ * next component added has none either, and nothing fails when it does. One rule cannot be
+ * forgotten by a component that does not know it exists.
+ *
+ * ## `:focus-visible`, not `:focus`
+ *
+ * A mouse user clicking a range pill should not get a ring around a control whose selected
+ * state is already drawn. `:focus-visible` gives it to the keyboard, which is who needs it.
+ *
+ * ## The colour is the accent, and the offset matters
+ *
+ * The tokens reserve `--accent` for "you can touch this", so a ring in it means the same
+ * thing a link does. The offset keeps the ring clear of the element's own border rather
+ * than stacked on it, which is what makes it legible on the range group where the selected
+ * pill is already filled with the accent.
+ *
+ * Nothing in this file or the components resets `outline` any more. A reset here would
+ * undo this rule everywhere at once, and it would look like a single missing ring rather
+ * than like the bug it is.
+ */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/**
+ * The terminal's window: a fixed height, and a soft bottom edge.
+ *
+ * ## Fixed, so the hero does not grow line by line
+ *
+ * Letting the window size itself to the transcript means the section's height changes as
+ * the animation runs and everything below it moves. That is a layout shift caused on
+ * purpose, which is worth avoiding anywhere and especially here, where a Lighthouse run
+ * already flags the shift from the loading state.
+ *
+ * ## The fade is a mask rather than an overlay
+ *
+ * An overlay would have to be painted in `--surface` to blend in, and would then sit on top
+ * of the scrollbar and of whatever text happened to be near the edge. A mask fades what is
+ * actually there, scrollbar included, and costs no extra element. It also does the thing a
+ * hard edge cannot: it reads as a session continuing below rather than as a box that
+ * happens to end.
+ *
+ * Defined outside the animation blocks below, because the window is a layout decision and
+ * has nothing to do with whether motion is allowed.
+ */
+.terminal-body {
+  /* Sized so the transcript's last line or two land inside the fade and dissolve there,
+     rather than sitting fully below the window where they would simply be missing. Tall
+     enough that the dissolve covers the tail rather than a quarter of the session: the fade
+     got deeper when the hero was stacked, and this is what pays for it. The transcript is
+     fixed and does not reflow, so these are numbers that stay right. */
+  height: 19rem;
+  overflow: auto;
+  /* Nearly four lines tall. Long enough to read as a dissolve rather than as a shadow, and
+     the curve is eased rather than linear so the last line goes gradually instead of
+     vanishing at a threshold. */
+  mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 5.5rem),
+    color-mix(in oklab, #000 45%, transparent) calc(100% - 2rem),
+    transparent 100%
+  );
+
+  /* No scrollbar. The window is a fixed height on purpose and the transcript runs past it
+     on purpose, and a scrollbar is the one element that turns that from a session still
+     running into a box with a scrollbar in it. The fade is what says there is more, and
+     the wheel still scrolls it for anyone who wants to look ahead. */
+  scrollbar-width: none;
+}
+
+.terminal-body::-webkit-scrollbar {
+  display: none;
+}
+
+/**
+ * The terminal's bottom edge, dissolving into the page.
+ *
+ * The mask above fades the *text*; this fades the *window*, so the card stops ending in a
+ * border and a pair of rounded corners and instead runs out into whatever is behind it. The
+ * two are separate because they answer different questions: the mask is about a session
+ * continuing, this is about the box not being a box.
+ *
+ * It has to be an overlay rather than a property of the card, because what is being hidden
+ * is the card's own border, and a border cannot fade. `pointer-events: none` so it never
+ * intercepts a click on the content underneath.
+ *
+ * In the light theme `--surface` and `--plane` differ by three units per channel, so what a
+ * reader sees here is mostly the disappearing border; in the dark they are far enough apart
+ * that the card itself visibly sinks into the page.
+ */
+.terminal-blend {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 4rem;
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, var(--plane));
+}
+
+/**
+ * The caret's base state, outside the animations so that it is also the state under
+ * `prefers-reduced-motion`, where no animation ever runs to make it visible.
+ */
+.terminal-caret {
+  display: inline-block;
+  width: 0.6em;
+  visibility: hidden;
 }
 
 /**
@@ -214,6 +409,17 @@ body {
     }
   }
 
+  @keyframes blink {
+    0%,
+    49% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+
   .animate-rise {
     animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
@@ -231,14 +437,131 @@ body {
     stroke-dasharray: var(--dash);
     animation: draw 1.6s cubic-bezier(0.4, 0, 0.2, 1) both;
   }
+
+  /**
+   * The terminal, revealed rather than typed by script.
+   *
+   * Every line is in the DOM from the first paint, so the text is real: selectable,
+   * copyable, and read by a screen reader in full. What animates is only how it appears.
+   * The command types itself by clipping a monospace line, which is the one trick that
+   * needs no JavaScript at all, and the output lines fade in behind it.
+   *
+   * `steps(var(--chars))` is what makes it read as typing rather than as a wipe: the width
+   * advances one character cell at a time, and the cell is exactly one character because
+   * the font is monospace.
+   */
+  .terminal-command {
+    display: inline-block;
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    vertical-align: bottom;
+    animation-name: type;
+    animation-timing-function: steps(var(--chars), end);
+    animation-fill-mode: forwards;
+  }
+
+  /**
+   * Everything that is present from the first paint and painted on its own turn: the
+   * prompt and the output lines alike.
+   *
+   * The prompt used to be static, which is what made every `$` in the transcript visible
+   * from the start and turned the window into a list of finished commands rather than one
+   * being typed.
+   */
+  .terminal-appears {
+    opacity: 0;
+    animation: fade 0.3s ease-out forwards;
+  }
+
+  /**
+   * The caret, which lives only while its own command is typing.
+   *
+   * Two animations, because they answer different questions and no one keyframe set can do
+   * both: `blink` runs forever on `opacity`, and `caret-life` gates `visibility` so the
+   * caret is painted at all only during its own line. Two properties rather than two
+   * animations fighting over one is what makes that work.
+   *
+   * `step-end` rather than a linear interpolation: `visibility` is discrete, and holding
+   * the starting value of each interval until the interval ends is exactly the behaviour
+   * wanted. Visible from its own start, hidden at the end, and `forwards` holds it hidden.
+   * Before this, every command line had a caret blinking forever, so the transcript ended
+   * up with a dozen of them going at once.
+   */
+  .terminal-caret {
+    animation:
+      caret-life var(--caret-life) step-end forwards,
+      blink 1.05s step-end infinite;
+    animation-delay: var(--caret-at), var(--caret-at);
+  }
+
+  @keyframes caret-life {
+    from {
+      visibility: visible;
+    }
+    to {
+      visibility: hidden;
+    }
+  }
+
+  @keyframes type {
+    from {
+      width: 0;
+    }
+    to {
+      width: calc(var(--chars) * 1ch);
+    }
+  }
 }
 
+/**
+ * Under reduced motion the terminal shows its finished state: commands unclipped, output
+ * visible, no caret. It is the same transcript either way, which is the point of keeping
+ * the text in the document rather than generating it.
+ */
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
   .animate-fade,
   .animate-wipe,
   .animate-draw {
     animation: none;
+  }
+
+  .terminal-command {
+    width: auto;
+  }
+
+  .terminal-appears {
+    opacity: 1;
+  }
+
+  .terminal-caret {
+    display: none;
+  }
+
+  /*
+   * The window stops being a window and shows the whole transcript.
+   *
+   * Without this the fixed height would clip the last lines behind a fade that no longer
+   * animates, and with the scrollbar hidden there would be nothing to say they were there.
+   * It is the same principle as the rest of this block: reduced motion gets the finished
+   * state, not a still version of the moving one.
+   */
+  /* A pulsing placeholder is still a pulse. It becomes a plain grey box, which says the
+     same thing to a reader who has asked the system to stop things moving. */
+  .animate-pulse {
+    animation: none;
+  }
+
+  .terminal-body {
+    height: auto;
+    overflow: visible;
+    mask-image: none;
+  }
+
+  /* Nothing is being dissolved into anything: the whole transcript is simply there. */
+  .terminal-blend {
+    display: none;
   }
 }
 
@@ -258,7 +581,7 @@ body {
 .hero-wash::before {
   content: "";
   position: absolute;
-  inset: 0 -2rem auto -2rem;
+  inset: 0 auto;
   height: 30rem;
   z-index: -1;
   pointer-events: none;

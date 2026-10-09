@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * A closing-price chart, with each session's high–low range banded behind it.
+ * A closing-price chart, with a volume histogram beneath it and each session's high–low
+ * range banded behind the line.
  *
  * ## Why there is no candlestick
  *
@@ -17,16 +18,27 @@
  * not move. The heading above the chart states the same change in figures, signed, so a
  * reader who cannot separate the two hues loses nothing.
  *
+ * ## Volume rides its own axis, drawn small
+ *
+ * Volume is a different quantity from price, so it gets a second, hidden axis rather than
+ * a share of the price scale. That axis' top sits four times the busiest session, which
+ * puts the tallest bar at a quarter of the height: legible, but never competing with the
+ * line, and never implying that a heavy session is why the price moved.
+ *
  * ## Missing sessions leave gaps, not zeroes
  *
  * The series holds only the sessions the scrip actually traded, and the x axis is
  * categorical: a scrip suspended for a month shows a gap in the points, never a plunge to
  * zero. `connectNulls` is off and there are no nulls to connect, the points simply do
- * not exist, which is the honest depiction of a market that was not open for it.
+ * not exist, which is the honest depiction of a market that was not open for it. Volume
+ * follows the same rule: a session the archive publishes without a figure draws no bar,
+ * since a bar at the baseline would say it traded nothing, which is not what a missing
+ * figure means.
  */
 
 import {
   Area,
+  Bar,
   ComposedChart,
   Line,
   ReferenceDot,
@@ -36,16 +48,35 @@ import {
   YAxis,
 } from "recharts";
 
-import { price, sessionDate, signed, percent } from "@/lib/format";
+import { price, sessionDate, signed, percent, volume } from "@/lib/format";
 import type { SeriesPoint } from "@/lib/market";
+
+/** The chart's own row, the shape the tooltip reads back off the cursor. */
+interface ChartRow {
+  date: string;
+  label: string;
+  close: number | null;
+  range: [number, number] | null;
+  volume: number | null;
+}
+
+/**
+ * The volume axis' top, as a multiple of the busiest session.
+ *
+ * Above one so the bars sit low: at four the tallest reaches a quarter of the height.
+ */
+const VOLUME_HEADROOM = 4;
 
 export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
   // Recharts wants its own array, and the range band needs both ends present.
-  const data = points.map((point) => ({
+  const data: ChartRow[] = points.map((point) => ({
+    date: point.date,
     label: point.label,
     close: point.close,
     // A two-element key is how a range Area is expressed: baseline to high, then low.
     range: point.low === null || point.high === null ? null : [point.low, point.high],
+    // Left as `null`, never `0`: a zero bar would claim the session traded nothing.
+    volume: point.volume,
   }));
 
   if (data.length < 2) {
@@ -68,8 +99,13 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
   const highPoint = points.find((point) => point.close === high) ?? null;
   const lowPoint = points.find((point) => point.close === low) ?? null;
 
+  const traded = points
+    .map((point) => point.volume)
+    .filter((value): value is number => value !== null && value > 0);
+  const busiest = traded.length === 0 ? null : Math.max(...traded);
+
   return (
-    <div className="h-80 w-full">
+    <div className="h-72 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 12, right: 12, bottom: 4, left: 0 }}>
           <defs>
@@ -98,24 +134,29 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
             tickLine={false}
           />
 
+          {/* Hidden: the bars need a scale, not a set of labels. A second visible axis
+              would restate in ticks what the tooltip and the table say in figures. */}
+          {busiest !== null && (
+            <YAxis yAxisId="volume" hide domain={[0, busiest * VOLUME_HEADROOM]} />
+          )}
+
           <Tooltip
             cursor={{ stroke: "var(--axis)", strokeWidth: 1 }}
-            content={({ active, payload, label }) => {
+            content={({ active, payload }) => {
               if (active !== true || payload === undefined || payload.length === 0) return null;
-              const point = payload[0]?.payload as
-                | { close: number | null; range: [number, number] | null }
-                | undefined;
-              if (point === undefined) return null;
+              const row = payload[0]?.payload as ChartRow | undefined;
+              if (row === undefined) return null;
 
               return (
                 <div className="rounded-md border border-[var(--hairline)] bg-[var(--surface)] px-3 py-2 text-xs shadow-sm">
-                  <p className="font-medium">{sessionDate(String(label))}</p>
-                  <p className="tabular">Close {price(point.close)}</p>
-                  {point.range !== null && (
+                  <p className="font-medium">{sessionDate(row.date)}</p>
+                  <p className="tabular">Close {price(row.close)}</p>
+                  {row.range !== null && (
                     <p className="tabular text-[var(--ink-2)]">
-                      Range {price(point.range[0])} – {price(point.range[1])}
+                      Range {price(row.range[0])} – {price(row.range[1])}
                     </p>
                   )}
+                  <p className="tabular text-[var(--muted)]">Volume {volume(row.volume)}</p>
                 </div>
               );
             }}
@@ -144,6 +185,19 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
             fill="url(#price-fill)"
             isAnimationActive={false}
           />
+
+          {/* Drawn after the washes so it reads through them, and before the line so the
+              price stays on top. `null` days simply have no rectangle. */}
+          {busiest !== null && (
+            <Bar
+              yAxisId="volume"
+              dataKey="volume"
+              fill="var(--axis)"
+              fillOpacity={0.35}
+              radius={[1, 1, 0, 0]}
+              isAnimationActive={false}
+            />
+          )}
 
           <Line
             type="monotone"
@@ -182,7 +236,13 @@ export function PriceChart({ points }: { points: readonly SeriesPoint[] }) {
   );
 }
 
-/** The chart's table twin, so no value is reachable only by hovering. */
+/**
+ * The chart's table twin, so no value is reachable only by hovering.
+ *
+ * The volume column is not decoration: the tooltip now reports a session's shares
+ * traded, and the rule on this site is that the table carries every field the tooltip
+ * does, so a reader who never hovers is missing nothing.
+ */
 export function PriceTable({ points }: { points: readonly SeriesPoint[] }) {
   return (
     <details className="text-sm">
@@ -191,7 +251,7 @@ export function PriceTable({ points }: { points: readonly SeriesPoint[] }) {
       </summary>
       <div className="mt-2 max-h-64 overflow-y-auto rounded-md border border-[var(--hairline)]">
         <table className="w-full">
-          <caption className="sr-only">Closing prices by session</caption>
+          <caption className="sr-only">Closing price and volume by session</caption>
           <thead className="sticky top-0 bg-[var(--surface)]">
             <tr className="border-b border-[var(--hairline)] text-left">
               <th scope="col" className="px-3 py-1.5 font-medium">Session</th>
@@ -199,6 +259,7 @@ export function PriceTable({ points }: { points: readonly SeriesPoint[] }) {
               <th scope="col" className="px-3 py-1.5 text-right font-medium">High</th>
               <th scope="col" className="px-3 py-1.5 text-right font-medium">Low</th>
               <th scope="col" className="px-3 py-1.5 text-right font-medium">Close</th>
+              <th scope="col" className="px-3 py-1.5 text-right font-medium">Volume</th>
             </tr>
           </thead>
           <tbody>
@@ -209,6 +270,9 @@ export function PriceTable({ points }: { points: readonly SeriesPoint[] }) {
                 <td className="tabular px-3 py-1.5 text-right">{price(point.high)}</td>
                 <td className="tabular px-3 py-1.5 text-right">{price(point.low)}</td>
                 <td className="tabular px-3 py-1.5 text-right">{price(point.close)}</td>
+                <td className="tabular px-3 py-1.5 text-right text-[var(--muted)]">
+                  {volume(point.volume)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -226,7 +290,14 @@ export function SeriesChange({ points }: { points: readonly SeriesPoint[] }) {
 
   const change = last - first;
   const changePercent = (change / first) * 100;
-  const className = change > 0 ? "text-[var(--up)]" : change < 0 ? "text-[var(--down)]" : "text-[var(--flat)]";
+  // The `-ink` tokens: this is a written figure, signed, not a mark to be told apart from
+  // another mark. See the palette note in globals.css.
+  const className =
+    change > 0
+      ? "text-[var(--up-ink)]"
+      : change < 0
+        ? "text-[var(--down-ink)]"
+        : "text-[var(--flat-ink)]";
 
   return (
     <span className={`tabular font-medium ${className}`}>

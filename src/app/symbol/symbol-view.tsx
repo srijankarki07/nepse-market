@@ -24,6 +24,13 @@
  * A year is 230 session files. Cached they are free, but the first load of a long range
  * on a cold cache is seconds of fetching, so the default is deliberately short and the
  * longer ranges are a deliberate click rather than something every visitor pays for.
+ *
+ * ## The rail ranks by turnover, because the archive has no sectors
+ *
+ * A "related scrips" rail would normally group by industry or index membership. The
+ * archive holds neither, and no share counts either, so any such grouping would be
+ * invented. Turnover is a real column, so the rail takes the same session's other scrips
+ * by it and says so, rather than inventing a peer set the data cannot support.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -31,22 +38,38 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { Card } from "@/components/cards";
+import { Change, ScripList } from "@/components/cards";
+import { Activity, Layers, TrendDown, TrendUp } from "@/components/icons";
 import { PriceChart, PriceTable, SeriesChange } from "@/components/price-chart";
-import { changeColor, count, percent, price, sessionDate, signed, turnover, volume } from "@/lib/format";
-import { toSeries } from "@/lib/market";
+import { Avatar, Chip, Segmented, SectionHeading, StatTile } from "@/components/ui";
+import { changeColor, count, price, sessionDate, signed, turnover, volume } from "@/lib/format";
+import { loadMarket, toSeries } from "@/lib/market";
 import { RANGES, nepse, rangeStart, type RangeKey } from "@/lib/nepse";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
+
+/** `Segmented` wants `value`/`label`; `RANGES` names the query key `key`. Mapped once, here. */
+const RANGE_OPTIONS: { value: RangeKey; label: string }[] = RANGES.map((range) => ({
+  value: range.key,
+  label: range.label,
+}));
 
 export function SymbolView() {
   const params = useSearchParams();
   const symbol = (params.get("t") ?? "").trim().toUpperCase();
-  const [rangeKey, setRangeKey] = useState<RangeKey>("3m");
+  const [rangeKey, setRangeKey] = useState<RangeKey>("1m");
 
   const quote = useQuery({
     queryKey: ["quote", symbol],
     enabled: symbol !== "",
     queryFn: () => nepse().quote(symbol),
+  });
+
+  // The rail's fuel, and the homepage's query already: the same session file keyed the
+  // same way, so arriving from the market costs no extra request.
+  const market = useQuery({
+    queryKey: ["market"],
+    enabled: symbol !== "",
+    queryFn: () => loadMarket(nepse()),
   });
 
   // Separate from the quote because it comes from a different file and is a nicety: a
@@ -86,10 +109,17 @@ export function SymbolView() {
 
   if (quote.isPending) {
     return (
-      <div className="space-y-6" aria-busy="true" aria-live="polite">
-        <div className="h-8 w-48 animate-pulse rounded bg-[var(--grid)]" />
-        <div className="h-24 animate-pulse rounded-xl bg-[var(--grid)]" />
-        <div className="h-80 animate-pulse rounded-xl bg-[var(--grid)]" />
+      <div className="space-y-12" aria-busy="true" aria-live="polite">
+        <div className="space-y-6">
+          <div className="h-4 w-40 animate-pulse rounded bg-[var(--grid)]" />
+          <div className="h-36 animate-pulse rounded-2xl bg-[var(--grid)]" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((tile) => (
+            <div key={tile} className="h-24 animate-pulse rounded-xl bg-[var(--grid)]" />
+          ))}
+        </div>
+        <div className="h-96 animate-pulse rounded-2xl bg-[var(--grid)]" />
         <p className="text-sm text-[var(--ink-2)]">Reading {symbol}…</p>
       </div>
     );
@@ -115,83 +145,89 @@ export function SymbolView() {
   const entry = quote.data;
   const points = toSeries(history.data ?? []);
 
+  const others =
+    market.data === undefined
+      ? []
+      : [...market.data.rows]
+          .filter((row) => row.symbol !== entry.symbol)
+          .sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))
+          .slice(0, 5);
+
   return (
-    <div className="space-y-6">
-      <nav className="text-xs text-[var(--muted)]">
-        <Link href="/" className="hover:underline">
-          Market
-        </Link>
-        <span className="mx-1.5">/</span>
-        <span>{entry.symbol}</span>
-      </nav>
+    <div className="space-y-12">
+      <div className="space-y-6">
+        <nav className="text-xs text-[var(--muted)]">
+          <Link href="/" className="hover:underline">
+            Market
+          </Link>
+          <span className="mx-1.5">/</span>
+          <span>{entry.symbol}</span>
+        </nav>
 
-      <section className="space-y-1">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-3xl font-semibold tracking-tight">{entry.symbol}</h1>
-          <p className={`text-xl font-semibold ${changeColor(entry.change)}`}>
-            {price(entry.quote.close)}
-            <span className="ml-2 text-sm font-medium">
-              {signed(entry.change)} ({percent(entry.changePercent)})
+        <section className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-6">
+          <h1 className="flex items-center gap-3">
+            <Avatar symbol={entry.symbol} size={44} />
+            <span className="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
+              <span className="font-mono text-base font-semibold">{entry.symbol}</span>
+              {name.data != null && (
+                <span className="text-sm font-normal text-[var(--ink-2)]">{name.data}</span>
+              )}
             </span>
+          </h1>
+
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="tabular text-4xl font-semibold tracking-tight">
+              {price(entry.quote.close)}
+            </p>
+            <span className={`tabular text-sm font-medium ${changeColor(entry.change)}`}>
+              {signed(entry.change)}
+            </span>
+            <Chip changePercent={entry.changePercent} />
+          </div>
+
+          <p className="mt-2 text-xs text-[var(--muted)]">
+            End of day · {sessionDate(entry.date)} · previous close {price(entry.previousClose)}
           </p>
-        </div>
-        {name.data != null && <p className="text-sm text-[var(--ink-2)]">{name.data}</p>}
-        <p className="text-xs text-[var(--muted)]">
-          {sessionDate(entry.date)}
-          {entry.previousClose !== null && <> · against {price(entry.previousClose)}</>}
-        </p>
+        </section>
+      </div>
+
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatTile icon={<Activity size={14} />} label="Open" value={price(entry.quote.open)} />
+        <StatTile icon={<TrendUp size={14} />} label="High" value={price(entry.quote.high)} />
+        <StatTile icon={<TrendDown size={14} />} label="Low" value={price(entry.quote.low)} />
+        <StatTile
+          icon={<Layers size={14} />}
+          label="Volume"
+          value={volume(entry.quote.volume)}
+          note={`${turnover(entry.quote.turnover)} turnover`}
+        />
       </section>
 
-      <section className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card title="Open">
-          <p className="tabular text-2xl font-semibold">{price(entry.quote.open)}</p>
-        </Card>
-        <Card title="High">
-          <p className="tabular text-2xl font-semibold">{price(entry.quote.high)}</p>
-        </Card>
-        <Card title="Low">
-          <p className="tabular text-2xl font-semibold">{price(entry.quote.low)}</p>
-        </Card>
-        <Card title="Volume" note={turnover(entry.quote.turnover) + " turnover"}>
-          <p className="tabular text-2xl font-semibold">{volume(entry.quote.volume)}</p>
-        </Card>
-      </section>
+      <section className="space-y-5">
+        <SectionHeading
+          eyebrow="Session history"
+          title="Closing price"
+          note={
+            points.length >= 2 ? (
+              <>
+                <SeriesChange points={points} /> over {count(points.length)} sessions from{" "}
+                {sessionDate(points[0]!.date)}
+              </>
+            ) : (
+              "Not enough sessions in this range."
+            )
+          }
+          actions={
+            <Segmented
+              ariaLabel="Chart range"
+              options={RANGE_OPTIONS}
+              value={rangeKey}
+              onChange={setRangeKey}
+            />
+          }
+        />
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">Closing price</h2>
-            {points.length >= 2 && (
-              <p className="text-sm text-[var(--ink-2)]">
-                <SeriesChange points={points} />{" "}
-                <span className="text-[var(--muted)]">
-                  over {count(points.length)} sessions from {sessionDate(points[0]!.date)}
-                </span>
-              </p>
-            )}
-          </div>
-
-          {/* One control row above what it scopes, never a filter inside the card. */}
-          <div className="flex gap-1" role="group" aria-label="Chart range">
-            {RANGES.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => setRangeKey(option.key)}
-                aria-pressed={option.key === rangeKey}
-                className={`rounded-md px-2.5 py-1 text-xs ${
-                  option.key === rangeKey
-                    ? "bg-[var(--ink)] text-[var(--plane)]"
-                    : "text-[var(--ink-2)] hover:bg-[var(--grid)]"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-[var(--hairline)] bg-[var(--surface)] p-4">
+        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
           {history.isPending ? (
             <div className="h-80 animate-pulse rounded-lg bg-[var(--grid)]" />
           ) : history.error ? (
@@ -200,11 +236,39 @@ export function SymbolView() {
             <>
               <PriceChart points={points} />
               <PriceTable points={points} />
-              <p className="mt-2 text-xs text-[var(--muted)]">
+              <p className="mt-3 text-xs text-[var(--muted)]">
                 The band behind the line is each session&apos;s high–low range. Prices are
                 not adjusted for bonus shares, rights or splits.
               </p>
             </>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-5">
+        <SectionHeading
+          eyebrow="Same session"
+          title="Most traded scrips"
+          note={`The five busiest by turnover on ${sessionDate(entry.date)}, ${entry.symbol} aside.`}
+        />
+
+        <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
+          {market.isPending ? (
+            <div className="space-y-3">
+              {[0, 1, 2, 3, 4].map((row) => (
+                <div key={row} className="h-10 animate-pulse rounded-lg bg-[var(--grid)]" />
+              ))}
+            </div>
+          ) : market.error ? (
+            <p className="py-6 text-center text-sm text-[var(--muted)]">
+              The session could not be read.
+            </p>
+          ) : (
+            <ScripList
+              rows={others}
+              figure={(row) => <Change row={row} />}
+              empty={`No other scrip traded on ${sessionDate(entry.date)}.`}
+            />
           )}
         </div>
       </section>

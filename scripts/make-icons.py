@@ -42,13 +42,18 @@ FONT_REGULAR = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
 FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
 
 # The same tokens as globals.css, which cannot be imported here. Literal on purpose.
-BG = (13, 13, 13, 255)          # --plane, dark
-INK = (255, 255, 255, 255)      # --ink, dark
-PLANE = (249, 249, 247, 255)    # --plane, light
-INK_LIGHT = (11, 11, 11, 255)   # --ink, light
-INK_2 = (82, 81, 78, 255)       # --ink-2, light
-MUTED = (137, 135, 129, 255)    # --muted
-UP = (12, 163, 12, 255)         # --up
+#
+# Re-read from globals.css when the palette moves, because these cannot follow it. The dark
+# pair here was left on the pre-redesign neutral for a while after the site went slate-teal,
+# which nothing caught: a tab icon is not on the page, so no screenshot showed the mismatch
+# and no test could.
+BG = (11, 20, 24, 255)          # --plane, dark   #0b1418
+INK = (232, 241, 242, 255)      # --ink, dark     #e8f1f2
+PLANE = (249, 249, 247, 255)    # --plane, light  #f9f9f7
+INK_LIGHT = (11, 11, 11, 255)   # --ink, light    #0b0b0b
+INK_2 = (82, 81, 78, 255)       # --ink-2, light  #52514e
+MUTED = (137, 135, 129, 255)    # --muted, light  #898781
+UP = (12, 163, 12, 255)         # --up, light     #0ca30c
 
 # Everything is drawn at 4x and reduced once. Downscaling is what gives the curves and the
 # letter their edges; drawing at the final size leaves them visibly stepped.
