@@ -17,17 +17,38 @@
  * runtime, the same session the rest of the page is showing, because a hero that printed
  * invented prices would be a lie in the most prominent place on the site.
  *
- * ## The animation is CSS, deliberately
+ * ## The animation is CSS, deliberately; the scrolling is not
  *
  * A scripted typewriter would need a timer, state, and an effect to drive them, and it
  * would leave a screen reader reading a half-typed line. Clipping a monospace line with
  * `steps()` gets the same effect with none of that, and collapses to the finished state
  * under `prefers-reduced-motion` because the transcript was never generated.
+ *
+ * Scrolling is the one thing CSS cannot do here, and it is worth saying why. Every line is
+ * in the DOM from the start and merely transparent, so it occupies its space from the first
+ * paint: the window's scroll height never changes, and there is no "content growing" for a
+ * scroll container to follow. So the effect below does the following instead, bringing each
+ * line into view as it is revealed. It moves the window; it never touches the text.
  */
 
+import { useEffect, useMemo, useRef } from "react";
+
+/**
+ * The shell prompt and the REPL prompt, which are not the same character.
+ *
+ * Realism is the whole point of the device, and a transcript that answers a `$` prompt with
+ * a JavaScript expression is the kind of detail that reads as wrong to anyone who uses a
+ * terminal. `$` is a shell, `>` is Node waiting for an expression.
+ */
+export type TerminalPrompt = "$" | ">";
+
 export type TerminalLine =
-  | { readonly kind: "command"; readonly text: string }
-  | { readonly kind: "output"; readonly text: string; readonly tone?: "key" | "str" | "num" | "dim" }
+  | { readonly kind: "command"; readonly text: string; readonly prompt?: TerminalPrompt }
+  | {
+      readonly kind: "output";
+      readonly text: string;
+      readonly tone?: "key" | "str" | "num" | "dim";
+    }
   | { readonly kind: "blank" };
 
 // `num` is the `-ink` green: the transcript sits on `--surface`, which is the light one in
@@ -39,16 +60,39 @@ const TONE: Record<string, string> = {
   dim: "text-[var(--muted)]",
 };
 
-/** Milliseconds per typed character, and the pause before output starts. */
-const PER_CHAR = 42;
-const AFTER_COMMAND = 320;
-const OUT_LINE = 110;
+/**
+ * The rhythm of the session.
+ *
+ * These are the numbers that make it read as a terminal rather than as a paragraph being
+ * revealed, and they are separated rather than one constant because the three beats are
+ * genuinely different lengths in a real session:
+ *
+ *   - typing is fast and even, so it is one number per character;
+ *   - a command then goes away and does something, which is the longest pause and the one
+ *     the eyes read as "the request is out";
+ *   - a response arrives as several lines in quick succession, not all at once.
+ */
+const PER_CHAR = 40;
+
+/** Between the last character of a command and its first line of output. */
+const AFTER_COMMAND = 430;
+
+/** Between two lines of the same response. */
+const BETWEEN_OUTPUTS = 95;
+
+/** A blank line is a breath between commands, not an instant. */
+const BLANK = 220;
 
 /** How long a line occupies the transcript, which is also the delay before the next one. */
 function durationOf(line: TerminalLine): number {
   if (line.kind === "command") return line.text.length * PER_CHAR + AFTER_COMMAND;
-  if (line.kind === "output") return OUT_LINE;
-  return 0;
+  if (line.kind === "output") return BETWEEN_OUTPUTS;
+  return BLANK;
+}
+
+/** How long a command's own line takes to type, which is how long its caret lives. */
+function typingDuration(line: TerminalLine): number {
+  return line.kind === "command" ? line.text.length * PER_CHAR : 0;
 }
 
 export function Terminal({
@@ -61,20 +105,105 @@ export function Terminal({
   className?: string;
 }) {
   /*
-   * The delays are computed during render rather than tracked in state: the transcript is
-   * fixed, so its timing is a pure function of it, and there is nothing here that needs to
-   * change after mount. Folded rather than accumulated in a loop variable, because mutating
-   * during render is what the compiler rules forbid.
+   * The delays are computed from the transcript rather than tracked in state: it is fixed,
+   * so its timing is a pure function of it, and nothing here changes after mount. Folded
+   * rather than accumulated in a loop variable, because mutating during render is what the
+   * compiler rules forbid.
+   *
+   * Memoised on `lines`, which its caller is responsible for holding steady. `Hero` does:
+   * it derives the transcript once per session rather than once per render. Without that
+   * this would recompute on every render and restart the whole animation each time.
    */
-  const timed = lines
-    .reduce<{ at: number; rows: { line: TerminalLine; start: number }[] }>(
-      (state, line) => ({
-        at: state.at + durationOf(line),
-        rows: [...state.rows, { line, start: state.at }],
-      }),
-      { at: 0, rows: [] },
-    )
-    .rows.map((row, index) => ({ ...row, key: index }));
+  const timed = useMemo(
+    () =>
+      lines
+        .reduce<{ at: number; rows: { line: TerminalLine; start: number }[] }>(
+          (state, line) => ({
+            at: state.at + durationOf(line),
+            rows: [...state.rows, { line, start: state.at }],
+          }),
+          { at: 0, rows: [] },
+        )
+        .rows.map((row, index) => ({ ...row, key: index })),
+    [lines],
+  );
+
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const lineRefs = useRef<(HTMLElement | null)[]>([]);
+
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (body === null) return;
+
+    // Reduced motion reveals the whole transcript at once, so there is nothing to follow
+    // and the window is left where it is for the reader to scroll themselves.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    /** The height of the fade at the bottom of the window. Mirrors `.terminal-body`. */
+    const FADE = 40;
+
+    /*
+     * Measured to the last line of text rather than to `scrollHeight`, because the window's
+     * content carries deliberate bottom padding for the followed line to scroll into. That
+     * padding is not transcript, and counting it would report an overflow on a desktop where
+     * nothing is actually out of view.
+     */
+    const container = body.getBoundingClientRect();
+    const lastLine = [...lineRefs.current].reverse().find((line) => line !== null);
+    if (lastLine === null || lastLine === undefined) return;
+
+    const textBottom =
+      lastLine.getBoundingClientRect().bottom - container.top + body.scrollTop;
+    const overflow = textBottom - body.clientHeight;
+
+    /*
+     * A little overflow is left alone, and this is the decision worth spelling out.
+     *
+     * Following every line means the transcript ends scrolled, which puts the `npm install`
+     * line out of view. That line is the one thing the hero exists to show, so a window that
+     * scrolls to accommodate a transcript it almost fits is trading the message for the
+     * tail. Instead the tail dissolves into the fade, which is what the fade is for.
+     *
+     * In practice this never fires, and that is worth knowing rather than assuming. The
+     * transcript's lines are wider than a phone and `w-max` keeps them on one line each, so
+     * the content is exactly as tall at 320px as at 1440px and the window is sized to it.
+     * This is a guard for the day the transcript is lengthened, not a phone fix. If it ever
+     * does run it is the same behaviour, just larger: follow the line that is being written.
+     */
+    if (overflow <= FADE) return;
+
+    /**
+     * Keeps the line being revealed clear of the bottom edge, where the fade is.
+     *
+     * Larger than the fade, deliberately. Scrolling only as far as the edge would leave the
+     * newest line sitting inside the dissolve, which is exactly the line the reader is
+     * meant to be watching. This is the fade's 2.5rem plus a margin.
+     */
+    const PAD = 48;
+
+    const timers = timed.map(({ start }, index) =>
+      window.setTimeout(
+        () => {
+          const line = lineRefs.current[index];
+          if (line === null || line === undefined) return;
+
+          const lineBox = line.getBoundingClientRect();
+          const bodyBox = body.getBoundingClientRect();
+          const below = lineBox.bottom - (bodyBox.bottom - PAD);
+
+          // Only ever scrolls down, and only as far as it must. Scrolling the element into
+          // view by the browser's own means would also move the page, which on a hero is
+          // the whole viewport.
+          if (below > 0) body.scrollTo({ top: body.scrollTop + below, behavior: "smooth" });
+        },
+        start + typingDuration(timed[index]?.line ?? { kind: "blank" }),
+      ),
+    );
+
+    return () => {
+      for (const timer of timers) window.clearTimeout(timer);
+    };
+  }, [timed]);
 
   return (
     <div
@@ -89,50 +218,106 @@ export function Terminal({
         <p className="truncate font-mono text-[11px] text-[var(--muted)]">{title}</p>
       </div>
 
-      {/* `overflow-x-auto` so a long line on a phone scrolls inside the window rather than
-          pushing the page sideways. */}
-      <pre className="overflow-x-auto p-4 font-mono text-[12.5px] leading-relaxed">
-        <code>
-          {timed.map(({ line, start, key }) => {
-            if (line.kind === "blank") return <span key={key}>{"\n"}</span>;
+      {/* The window. A fixed height, a soft bottom edge, and scrolling if the transcript
+          outgrows it. See `.terminal-body` in globals.css. */}
+      <div ref={bodyRef} className="terminal-body">
+        {/*
+          `w-max min-w-full` so a long line scrolls inside the window rather than pushing the
+          page sideways.
 
-            if (line.kind === "command") {
-              return (
-                <span key={key} className="block">
-                  <span aria-hidden="true" className="text-[var(--muted)] select-none">
-                    ${" "}
-                  </span>
+          `pb-14` is load-bearing and looks like stray padding. Scrolling to the very bottom
+          puts the last line's bottom edge at the window's bottom edge, which is inside the
+          fade, so without room to scroll past it the final line of the transcript would be
+          permanently dimmed. The padding is what the window scrolls into.
+        */}
+        <pre className="w-max min-w-full px-4 pt-4 pb-14 font-mono text-[12.5px] leading-relaxed">
+          <code>
+            {timed.map(({ line, start, key }) => {
+              if (line.kind === "blank") {
+                return (
                   <span
-                    className="terminal-command"
-                    style={
-                      {
-                        animationDelay: `${start}ms`,
-                        animationDuration: `${line.text.length * PER_CHAR}ms`,
-                        "--chars": line.text.length,
-                      } as React.CSSProperties
-                    }
+                    key={key}
+                    ref={(node) => {
+                      lineRefs.current[key] = node;
+                    }}
+                    className="block"
                   >
-                    {line.text}
+                    {"\n"}
                   </span>
-                  <span aria-hidden="true" className="terminal-caret">
-                    &nbsp;
+                );
+              }
+
+              if (line.kind === "command") {
+                return (
+                  <span
+                    key={key}
+                    ref={(node) => {
+                      lineRefs.current[key] = node;
+                    }}
+                    className="block"
+                  >
+                    {/*
+                      The prompt is revealed with its own command rather than being there
+                      from the first paint. It used to be static, so every `$` in the
+                      transcript was visible immediately and the window read as a list of
+                      finished commands rather than one being typed.
+                    */}
+                    <span
+                      aria-hidden="true"
+                      className="terminal-appears text-[var(--muted)] select-none"
+                      style={{ animationDelay: `${start}ms` }}
+                    >
+                      {line.prompt ?? "$"}{" "}
+                    </span>
+                    <span
+                      className="terminal-command"
+                      style={
+                        {
+                          animationDelay: `${start}ms`,
+                          animationDuration: `${typingDuration(line)}ms`,
+                          "--chars": line.text.length,
+                        } as React.CSSProperties
+                      }
+                    >
+                      {line.text}
+                    </span>
+                    {/*
+                      The caret lives for exactly as long as its own command types. It used
+                      to blink forever on every command line, so the transcript ended up
+                      with a dozen of them going at once.
+                    */}
+                    <span
+                      aria-hidden="true"
+                      className="terminal-caret"
+                      style={
+                        {
+                          "--caret-at": `${start}ms`,
+                          "--caret-life": `${typingDuration(line)}ms`,
+                        } as React.CSSProperties
+                      }
+                    >
+                      &nbsp;
+                    </span>
                   </span>
+                );
+              }
+
+              return (
+                <span
+                  key={key}
+                  ref={(node) => {
+                    lineRefs.current[key] = node;
+                  }}
+                  className={`terminal-appears block whitespace-pre ${TONE[line.tone ?? ""] ?? ""}`}
+                  style={{ animationDelay: `${start}ms` }}
+                >
+                  {line.text}
                 </span>
               );
-            }
-
-            return (
-              <span
-                key={key}
-                className={`terminal-out block whitespace-pre ${TONE[line.tone ?? ""] ?? ""}`}
-                style={{ animationDelay: `${start}ms` }}
-              >
-                {line.text}
-              </span>
-            );
-          })}
-        </code>
-      </pre>
+            })}
+          </code>
+        </pre>
+      </div>
     </div>
   );
 }

@@ -247,6 +247,58 @@ body {
 }
 
 /**
+ * The terminal's window: a fixed height, and a soft bottom edge.
+ *
+ * ## Fixed, so the hero does not grow line by line
+ *
+ * Letting the window size itself to the transcript means the section's height changes as
+ * the animation runs and everything below it moves. That is a layout shift caused on
+ * purpose, which is worth avoiding anywhere and especially here, where a Lighthouse run
+ * already flags the shift from the loading state.
+ *
+ * ## The fade is a mask rather than an overlay
+ *
+ * An overlay would have to be painted in `--surface` to blend in, and would then sit on top
+ * of the scrollbar and of whatever text happened to be near the edge. A mask fades what is
+ * actually there, scrollbar included, and costs no extra element. It also does the thing a
+ * hard edge cannot: it reads as a session continuing below rather than as a box that
+ * happens to end.
+ *
+ * Defined outside the animation blocks below, because the window is a layout decision and
+ * has nothing to do with whether motion is allowed.
+ */
+.terminal-body {
+  /* Sized so the transcript's last line lands inside the fade and dissolves there, rather
+     than sitting fully below the window where it would simply be missing. The transcript is
+     fixed and does not reflow, so this is a number that stays right. */
+  height: 16rem;
+  overflow: auto;
+  /* The fade is two and a half lines tall, which is enough to read as a dissolve rather
+     than as a shadow, and short enough that the line being typed stays clear of it. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 2.5rem), transparent);
+
+  /* No scrollbar. The window is a fixed height on purpose and the transcript runs past it
+     on purpose, and a scrollbar is the one element that turns that from a session still
+     running into a box with a scrollbar in it. The fade is what says there is more, and
+     the wheel still scrolls it for anyone who wants to look ahead. */
+  scrollbar-width: none;
+}
+
+.terminal-body::-webkit-scrollbar {
+  display: none;
+}
+
+/**
+ * The caret's base state, outside the animations so that it is also the state under
+ * `prefers-reduced-motion`, where no animation ever runs to make it visible.
+ */
+.terminal-caret {
+  display: inline-block;
+  width: 0.6em;
+  visibility: hidden;
+}
+
+/**
  * The hero's reveal animations.
  *
  * All of it collapses to nothing under `prefers-reduced-motion`, which is not a nicety:
@@ -345,15 +397,47 @@ body {
     animation-fill-mode: forwards;
   }
 
-  .terminal-out {
+  /**
+   * Everything that is present from the first paint and painted on its own turn: the
+   * prompt and the output lines alike.
+   *
+   * The prompt used to be static, which is what made every `$` in the transcript visible
+   * from the start and turned the window into a list of finished commands rather than one
+   * being typed.
+   */
+  .terminal-appears {
     opacity: 0;
-    animation: fade 0.35s ease-out forwards;
+    animation: fade 0.3s ease-out forwards;
   }
 
+  /**
+   * The caret, which lives only while its own command is typing.
+   *
+   * Two animations, because they answer different questions and no one keyframe set can do
+   * both: `blink` runs forever on `opacity`, and `caret-life` gates `visibility` so the
+   * caret is painted at all only during its own line. Two properties rather than two
+   * animations fighting over one is what makes that work.
+   *
+   * `step-end` rather than a linear interpolation: `visibility` is discrete, and holding
+   * the starting value of each interval until the interval ends is exactly the behaviour
+   * wanted. Visible from its own start, hidden at the end, and `forwards` holds it hidden.
+   * Before this, every command line had a caret blinking forever, so the transcript ended
+   * up with a dozen of them going at once.
+   */
   .terminal-caret {
-    display: inline-block;
-    width: 0.6em;
-    animation: blink 1.05s step-end infinite;
+    animation:
+      caret-life var(--caret-life) step-end forwards,
+      blink 1.05s step-end infinite;
+    animation-delay: var(--caret-at), var(--caret-at);
+  }
+
+  @keyframes caret-life {
+    from {
+      visibility: visible;
+    }
+    to {
+      visibility: hidden;
+    }
   }
 
   @keyframes type {
@@ -383,12 +467,26 @@ body {
     width: auto;
   }
 
-  .terminal-out {
+  .terminal-appears {
     opacity: 1;
   }
 
   .terminal-caret {
     display: none;
+  }
+
+  /*
+   * The window stops being a window and shows the whole transcript.
+   *
+   * Without this the fixed height would clip the last lines behind a fade that no longer
+   * animates, and with the scrollbar hidden there would be nothing to say they were there.
+   * It is the same principle as the rest of this block: reduced motion gets the finished
+   * state, not a still version of the moving one.
+   */
+  .terminal-body {
+    height: auto;
+    overflow: visible;
+    mask-image: none;
   }
 }
 
