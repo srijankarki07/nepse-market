@@ -23,15 +23,46 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 
-import { Terminal, type TerminalLine } from "@/components/terminal";
+import { Terminal, type TerminalLine, type TerminalSpan } from "@/components/terminal";
 import { ArrowUpRight, Grid, Layers, TrendUp } from "@/components/icons";
 import { count, percent, price, sessionDate, signed, turnover } from "@/lib/format";
 import type { Market } from "@/lib/market";
 import { useCountUp } from "@/hooks/use-count-up";
 
-const INSTALL = "npm install @srijankarki44/nepse-data";
+const PACKAGE = "@srijankarki44/nepse-data";
+const INSTALL = `npm install ${PACKAGE}`;
 const REPO = "https://github.com/srijankarki07/nepse-data";
-const NPM = "https://www.npmjs.com/package/@srijankarki44/nepse-data";
+const NPM = `https://www.npmjs.com/package/${PACKAGE}`;
+
+/*
+ * The transcript's vocabulary, as six one-word constructors.
+ *
+ * Without them the transcript below is a wall of `{ text, tone }` objects and stops being
+ * readable as the thing it is describing, which defeats the point of showing it at all.
+ * These name the *reason* for a colour rather than the colour: `kw` is a keyword, `pkg` is
+ * one of the names this site cares about.
+ */
+const pkg = (text: string): TerminalSpan => ({ text, tone: "pkg" });
+const kw = (text: string): TerminalSpan => ({ text, tone: "key" });
+const fn = (text: string): TerminalSpan => ({ text, tone: "fn" });
+const str = (text: string): TerminalSpan => ({ text, tone: "str" });
+const num = (text: string): TerminalSpan => ({ text, tone: "num" });
+const dim = (text: string): TerminalSpan => ({ text, tone: "dim" });
+
+/** Runs of a line, letting the plain stretches be written as plain strings. */
+function code(...parts: readonly (string | TerminalSpan)[]): TerminalSpan[] {
+  return parts.map((part) => (typeof part === "string" ? { text: part } : part));
+}
+
+/** `key: value,` with each half in its own colour. `last` drops the trailing comma. */
+function pair(key: string, value: TerminalSpan, last = false): TerminalSpan[] {
+  return [kw(key), dim(": "), value, dim(last ? " " : ", ")];
+}
+
+/** A one-line rendition of an object, the way a REPL prints one. */
+function print(pairs: readonly TerminalSpan[][]): TerminalSpan[] {
+  return [dim("{ "), ...pairs.flat(), dim("}")];
+}
 
 /**
  * The transcript, built from the session on screen.
@@ -59,40 +90,60 @@ function transcriptFor(market: Market): TerminalLine[] {
   const totalTurnover = market.rows.reduce((total, row) => total + (row.turnover ?? 0), 0);
 
   const lines: TerminalLine[] = [
-    { kind: "command", text: INSTALL },
-    { kind: "output", text: "added 1 package, and no market data", tone: "dim" },
+    { kind: "command", text: code(pkg("npm"), dim(" install "), str(PACKAGE)) },
+    { kind: "output", text: code(dim("added "), num("1"), dim(" package, and no market data")) },
     { kind: "blank" },
-    { kind: "command", text: "node", prompt: "$" },
-    { kind: "command", text: "const market = await nepse.latest();", prompt: ">" },
+    // `npm` and `node` are `pkg` rather than `fn`: they are the names a reader came here to
+    // find, which is what the accent means everywhere else on this site.
+    { kind: "command", text: code(pkg("node")), prompt: "$" },
+    {
+      kind: "command",
+      prompt: ">",
+      text: code(kw("const"), " market = ", kw("await"), " nepse.", fn("latest"), "()"),
+    },
     {
       kind: "output",
-      text: `{ date: "${market.date}", scrips: ${market.rows.length}, turnover: "${turnover(totalTurnover)}" }`,
-      tone: "dim",
+      text: print([
+        pair("date", str(`"${market.date}"`)),
+        pair("scrips", num(String(market.rows.length))),
+        pair("turnover", str(`"${turnover(totalTurnover)}"`), true),
+      ]),
     },
     { kind: "blank" },
   ];
 
   if (featured !== undefined) {
+    const local = featured.symbol.toLowerCase();
+
     lines.push(
       {
         kind: "command",
-        text: `const ${featured.symbol.toLowerCase()} = await nepse.quote("${featured.symbol}");`,
         prompt: ">",
+        text: code(kw("const"), ` ${local} = `, kw("await"), " nepse.", fn("quote"), "(", str(`"${featured.symbol}"`), ")"),
       },
       {
         kind: "output",
-        text: `{ close: ${price(featured.close)}, change: ${signed(featured.change)}, changePercent: ${percent(featured.changePercent)} }`,
-        tone: "dim",
+        text: print([
+          pair("close", num(price(featured.close))),
+          pair("change", num(signed(featured.change))),
+          pair("changePercent", num(percent(featured.changePercent)), true),
+        ]),
       },
       { kind: "blank" },
     );
   }
 
-  lines.push({ kind: "command", text: "nepse.manifest()", prompt: ">" });
+  lines.push({
+    kind: "command",
+    prompt: ">",
+    text: code("nepse.", fn("manifest"), "()"),
+  });
   lines.push({
     kind: "output",
-    text: `{ latest: "${market.date}", sessions: ${count(market.sessionsInArchive)} }`,
-    tone: "dim",
+    text: print([
+      pair("latest", str(`"${market.date}"`)),
+      pair("sessions", num(count(market.sessionsInArchive)), true),
+    ]),
   });
 
   return lines;
@@ -113,7 +164,7 @@ function InstallLine() {
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] py-2 pr-2 pl-3">
+    <div className="flex w-full max-w-md items-center gap-2 rounded-lg border border-[var(--hairline)] bg-[var(--surface)] py-2 pr-2 pl-3 text-left">
       <code className="min-w-0 flex-1 truncate font-mono text-[13px]">
         <span aria-hidden="true" className="text-[var(--muted)] select-none">
           ${" "}
@@ -146,18 +197,25 @@ export function Hero({ market }: { market: Market }) {
   const transcript = useMemo(() => transcriptFor(market), [market]);
 
   return (
-    <section className="hero-wash flex flex-col gap-8 lg:gap-10">
+    <section className="hero-wash flex flex-col items-center gap-10">
       {/*
         `min-w-0` is load-bearing. A flex child defaults to `min-width: auto`, which means it
         refuses to shrink below its content, and the terminal below is content that does not
         wrap. Without this the whole page scrolls sideways on a phone.
       */}
-      <div className="flex min-w-0 flex-col space-y-5">
-        <p className="animate-fade text-[11px] font-medium tracking-wide text-[var(--muted)] uppercase">
-          npm · @srijankarki44/nepse-data
+      <div className="flex min-w-0 max-w-3xl flex-col items-center space-y-6 text-center">
+        {/*
+          The eyebrow as a pill with a status dot, which is the shape the references use for
+          "what this is" and reads as a label rather than as the start of a sentence. The dot
+          is the up-green: this site is running and current, which is the one claim the pill
+          is making.
+        */}
+        <p className="animate-fade inline-flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--surface)] px-3.5 py-1.5 text-[11px] font-medium tracking-wide text-[var(--muted)] uppercase">
+          <span aria-hidden="true" className="size-1.5 rounded-full bg-[var(--up)]" />
+          npm · {PACKAGE}
         </p>
 
-        <h1 className="animate-rise text-4xl leading-[1.08] font-semibold tracking-tight sm:text-5xl">
+        <h1 className="animate-rise text-4xl leading-[1.08] font-semibold tracking-tight sm:text-5xl lg:text-6xl">
           Every NEPSE close since 2011, in a few lines of code.
         </h1>
 
@@ -167,9 +225,9 @@ export function Hero({ market }: { market: Market }) {
           package, so it is current the moment you run it.
         </p>
 
-        <div className="animate-rise space-y-3 [animation-delay:120ms]">
+        <div className="animate-rise flex w-full flex-col items-center gap-3 [animation-delay:120ms]">
           <InstallLine />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <Link
               href="#market"
               className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--plane)] transition-opacity hover:opacity-90"
@@ -194,9 +252,14 @@ export function Hero({ market }: { market: Market }) {
           </div>
         </div>
 
-        <dl className="animate-fade grid grid-cols-3 gap-4 border-t border-[var(--hairline)] pt-5 [animation-delay:200ms]">
+        {/*
+          The three figures, the way the references end a hero: a rule, then the numbers at
+          display size with small captions under them. Read as a band of evidence for the
+          claim in the headline rather than as three more paragraphs.
+        */}
+        <dl className="animate-fade grid w-full grid-cols-3 gap-4 border-t border-[var(--hairline)] pt-6 [animation-delay:200ms]">
           {[
-            { icon: <Grid size={14} />, label: "Scrips", value: count(scrips) },
+            { icon: <Grid size={14} />, label: "Scrips traded", value: count(scrips) },
             { icon: <TrendUp size={14} />, label: "Turnover", value: `${turnover(totalTurnover)}` },
             {
               icon: <Layers size={14} />,
@@ -205,11 +268,11 @@ export function Hero({ market }: { market: Market }) {
             },
           ].map((stat) => (
             <div key={stat.label}>
-              <dt className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+              <dd className="tabular text-2xl font-semibold tracking-tight">{stat.value}</dd>
+              <dt className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[var(--muted)]">
                 {stat.icon}
                 {stat.label}
               </dt>
-              <dd className="tabular mt-1 text-base font-semibold">{stat.value}</dd>
             </div>
           ))}
         </dl>
@@ -223,8 +286,8 @@ export function Hero({ market }: { market: Market }) {
         what makes it read as a terminal rather than as wrapped prose.
       */}
       <Terminal
-        className="animate-fade w-full min-w-0 [animation-delay:180ms]"
-        title="@srijankarki44/nepse-data — node"
+        className="animate-fade w-full min-w-0 max-w-3xl [animation-delay:180ms]"
+        title={`${PACKAGE} — node`}
         lines={transcript}
       />
     </section>
