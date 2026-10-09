@@ -230,19 +230,30 @@ export function Hero({ market }: { market: Market | undefined }) {
           npm · {PACKAGE}
         </p>
 
-        <h1 className="animate-rise text-4xl leading-[1.08] font-semibold tracking-tight sm:text-5xl lg:text-6xl">
-          Every NEPSE close since 2011, in a few lines of code.
+        {/*
+          "One import away" rather than the "few lines of code" this used to end on, which is
+          the promise every data package makes. What is unusual here is the distance between the
+          install and the first figure, and that is what the line now names. `text-balance`
+          because at the widest sizes the old break orphaned the last word on its own line.
+
+          The standfirst's timing is the archive's own documented promise — the session is
+          committed by 09:45 UTC, half an hour after the 15:00 Kathmandu close. Not "nightly":
+          the daily job runs in the Kathmandu afternoon, minutes after the market shuts, and a
+          site that said "nightly" would be describing a different pipeline.
+        */}
+        <h1 className="animate-rise text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          Every NEPSE close since 2011, one import away.
         </h1>
 
-        <p className="animate-rise max-w-prose text-base text-[var(--ink-2)] [animation-delay:60ms]">
+        <p className="animate-rise max-w-prose text-base text-pretty text-[var(--ink-2)] [animation-delay:60ms]">
           {market === undefined ? (
             <Skeleton className="h-4 w-9 align-middle" />
           ) : (
             count(market.sessionsInArchive)
           )}{" "}
-          sessions of end-of-day prices, served from a public archive that maintains itself. No
-          API key, no server, no rate limit, and no data in the package, so it is current the
-          moment you run it.
+          sessions of end-of-day prices, every listed scrip, from an archive that rebuilds
+          itself within half an hour of the close. No API key, no server, no rate limit, and
+          no data to keep in sync.
         </p>
 
         <div className="animate-rise flex w-full flex-col items-center gap-3 [animation-delay:120ms]">

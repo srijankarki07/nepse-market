@@ -83,6 +83,13 @@
   --axis: #c3c2b7;
   --hairline: rgba(11, 11, 11, 0.1);
 
+  /* The sticky header's surface: the plane with a little translucency, so what scrolls
+     under it is legible as movement rather than hidden. It is derived from `--plane` and
+     defined once, unlike the colour tokens above — the dark blocks redefine `--plane`
+     themselves, and `var()` inside a custom property resolves against the element's
+     computed value, so this follows the theme without being repeated in both arms. */
+  --veil: color-mix(in oklab, var(--plane) 80%, transparent);
+
   /* The terminal window's edge, and the reason it is a token rather than `--hairline`.
 
      A border has one job: separating the card from the page behind it. In the light theme

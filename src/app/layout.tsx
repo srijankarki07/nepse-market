@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 
 import { Providers } from "./providers";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { HeaderNav } from "@/components/header-nav";
 import {
   SITE_DESCRIPTION,
   SITE_NAME,
@@ -177,28 +177,57 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       </head>
 
       <body className="flex min-h-full flex-col bg-[var(--plane)] text-[var(--ink)]">
-        <header className="border-b border-[var(--hairline)] bg-[var(--surface)]">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-baseline gap-x-4 gap-y-1 px-4 py-4 sm:px-6">
-            <Link href="/" className="text-lg font-semibold tracking-tight">
+        {/*
+          The header, pinned.
+
+          Sticky because this page is long — the market table alone runs past several screens —
+          and the way back to `/about/` or to the other theme used to be a scroll to the top.
+
+          The surface is `--veil` rather than `--surface` so what passes under it stays
+          visible as movement instead of vanishing behind a solid bar. `backdrop-blur` is what
+          makes that legible rather than muddy, and it is the one effect here that is doing a
+          job: without it, table rows scrolling beneath the header would read as the header
+          flickering.
+
+          The bottom hairline is kept. Against `--plane` the light theme's `--surface` is
+          three units away per channel, so the blur alone would not draw an edge a reader can
+          see.
+        */}
+        <header className="sticky top-0 z-40 border-b border-[var(--hairline)] bg-[var(--veil)] backdrop-blur-md">
+          <div className="mx-auto flex h-14 max-w-6xl items-center gap-3 px-4 sm:px-6">
+            <Link
+              href="/"
+              className="flex shrink-0 items-center gap-2.5 font-semibold tracking-tight"
+            >
+              {/*
+                The favicon's own mark at 22px, drawn rather than loaded: `--ink` on `--plane`
+                inverts with the theme, which a fixed-colour image cannot do.
+              */}
+              <span
+                aria-hidden="true"
+                className="grid size-6 place-items-center rounded-md bg-[var(--ink)] text-[12px] font-bold text-[var(--plane)]"
+              >
+                N
+              </span>
               NEPSE
             </Link>
+
             {/*
               Said plainly and in the header, because it is the single most likely
               misunderstanding about this site: these are closing prices, not a live feed.
               A reader who assumes otherwise reads a stale number as a current one.
+
+              A phone gets only the half that carries the warning. Measured at 390px: the full
+              sentence needs 204px and the row can spare 71, so one half has to go, and the
+              half to lose is "end-of-day" — the hero's standfirst says it two lines below.
+              "Not a live feed" appears nowhere else on the page, so that is what stays.
             */}
-            <span className="text-xs text-[var(--muted)]">
-              end-of-day closing prices, not a live feed
+            <span className="min-w-0 truncate text-[11px] text-[var(--muted)]">
+              <span className="hidden sm:inline">end-of-day closing prices, </span>
+              not a live feed
             </span>
-            <nav className="ml-auto flex items-center gap-4 text-xs text-[var(--ink-2)]">
-              <Link href="/" className="hover:underline">
-                Market
-              </Link>
-              <Link href="/about/" className="hover:underline">
-                About the data
-              </Link>
-              <ThemeToggle />
-            </nav>
+
+            <HeaderNav />
           </div>
         </header>
 

@@ -40,7 +40,7 @@ import { Hero } from "@/components/hero";
 import { Activity, Banknote, Grid, Layers } from "@/components/icons";
 import { IndexChart, IndexTable } from "@/components/index-chart";
 import { MarketTable } from "@/components/market-table";
-import { IndexRail } from "@/components/index-rail";
+import { IndexGrid } from "@/components/index-grid";
 import { Segmented, SectionHeading, Skeleton, StatTile, type TrendPoint } from "@/components/ui";
 import { count, sessionDate, turnover, volume } from "@/lib/format";
 import { computeMarketIndex } from "@/lib/index-series";
@@ -81,7 +81,7 @@ export function MarketView() {
    * The exchange's own index levels.
    *
    * Absent on any archive that predates the artifact, where `indices()` answers an empty
-   * array rather than throwing, so the rail hides itself and the computed index above is
+   * array rather than throwing, so the grid hides itself and the computed index above is
    * the only one shown. That is the documented fallback, not a degraded state.
    */
   const levels = useQuery({
@@ -253,7 +253,7 @@ export function MarketView() {
         The exchange's levels, when the archive publishes them.
 
         Rendered only when there is something to render: an archive predating the artifact
-        gives an empty array, and an empty rail under a heading is worse than no heading.
+        gives an empty array, and an empty grid under a heading is worse than no heading.
       */}
       {(levels.isPending || (levels.data !== undefined && levels.data.length > 0)) && (
         <section className="space-y-5">
@@ -272,7 +272,7 @@ export function MarketView() {
           {levels.data === undefined ? (
             <Skeleton className="h-24 w-full rounded-xl" />
           ) : (
-            <IndexRail levels={levels.data} />
+            <IndexGrid levels={levels.data} />
           )}
         </section>
       )}
