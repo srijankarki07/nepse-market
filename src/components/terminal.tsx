@@ -71,6 +71,17 @@ export interface TerminalSpan {
  */
 export type LineText = string | readonly TerminalSpan[];
 
+import { useEffect, useMemo, useRef } from "react";
+
+/**
+ * The shell prompt and the REPL prompt, which are not the same character.
+ *
+ * Realism is the whole point of the device, and a transcript that answers a `$` prompt with
+ * a JavaScript expression is the kind of detail that reads as wrong to anyone who uses a
+ * terminal. `$` is a shell, `>` is Node waiting for an expression.
+ */
+export type TerminalPrompt = "$" | ">";
+
 export type TerminalLine =
   | { readonly kind: "command"; readonly text: LineText; readonly prompt?: TerminalPrompt }
   | { readonly kind: "output"; readonly text: LineText }
