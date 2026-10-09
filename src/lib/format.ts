@@ -98,10 +98,19 @@ export function direction(value: number | null | undefined): "up" | "down" | "fl
   return value > 0 ? "up" : "down";
 }
 
-/** The text colour for a change, as Tailwind classes. */
+/**
+ * The text colour for a change, as Tailwind classes.
+ *
+ * These are the palette's own tokens rather than Tailwind's colour scale. The repo's rule
+ * is that a colour on this page means exactly one of three things (direction, magnitude,
+ * or "you can touch this"), and a `dark:` variant puts a second, unrelated set of hues on
+ * top of that: `text-emerald-400` in the dark is not the green the palette validated
+ * against its red. Tokens also mean one definition serves both themes, so a direction
+ * cannot drift between them.
+ */
 export function changeColor(value: number | null | undefined): string {
   const which = direction(value);
-  if (which === "up") return "text-emerald-600 dark:text-emerald-400";
-  if (which === "down") return "text-rose-600 dark:text-rose-400";
-  return "text-neutral-500 dark:text-neutral-400";
+  if (which === "up") return "text-[var(--up)]";
+  if (which === "down") return "text-[var(--down)]";
+  return "text-[var(--muted)]";
 }

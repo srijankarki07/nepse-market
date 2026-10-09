@@ -7,27 +7,40 @@
  *
  * Green-for-up and red-for-down is the market's convention and it is also the classic
  * accessibility trap: red and green are exactly what deuteranopia collapses. The
- * obvious pair , a bright green against a bright red, measures a colour-vision
+ * obvious pair, a bright green against a bright red, measures a colour-vision
  * separation of **ΔE 4.1**, far below the 8 needed and below even the 6–8 band that
  * secondary encoding can rescue.
  *
  * The fix is to separate them by **lightness** as well as hue, which is why the light
- * palette pairs a bright green with a *deep* red and the dark palette pairs the same
- * green with a *pale* red:
+ * palette pairs a bright green with a *deep* red and the dark palette pairs a
+ * yellow-green with a *pale* red:
  *
- *   light  #0ca30c up  / #a30202 down   ΔE 15.9  · contrast >= 3:1  · all checks pass
- *   dark   #0ca30c up  / #f87171 down   ΔE 10.2  · contrast >= 3:1  · all checks pass
+ *   light  #0ca30c up  / #a30202 down   deuteranope dE 15.9  · contrast >= 3:1
+ *   dark   #a3e635 up  / #fb7185 down   deuteranope dE 16.1  · contrast >= 4.5:1
  *
- * Both were run through the palette validator rather than eyeballed. The colours also
- * never carry the meaning alone: every gain and loss is signed (`+`/`−`) in the markup,
- * so the figures read correctly in greyscale, in print, and to a reader who cannot tell
- * the two hues apart at all. Colour here is a second channel, never the only one.
+ * Both were run through a validator rather than eyeballed. The dark pair was re-checked
+ * when the dark palette moved to slate-teal, because a palette change is exactly when a
+ * validated pair stops being validated: the obvious bright green for a dark background,
+ * #4ade80, measures **7.5** against that pink, below the 8 the earlier note calls the
+ * floor. The yellow-green above measures 16.1, better than the pair it replaces.
+ *
+ * The colours also never carry the meaning alone: every gain and loss is signed (`+`/`−`)
+ * in the markup, so the figures read correctly in greyscale, in print, and to a reader who
+ * cannot tell the two hues apart at all. Colour here is a second channel, never the only
+ * one.
  *
  * ## Blue is for magnitude, not direction
  *
  * The sequential ramp is the single-hue blue from the same system, used where the
  * question is "how much" rather than "which way", archive coverage per year, for
  * instance. Directional charts use the up/down pair; there is no third case.
+ *
+ * ## The accent is for interaction, not for data
+ *
+ * `--accent` marks state a reader can act on: the selected range pill, a focused control,
+ * a link. It is the third role in the palette and it deliberately overlaps none of the
+ * others, so a colour on this page always means exactly one of three things: direction
+ * (up/down), magnitude (the sequential ramp), or "you can touch this".
  */
 
 :root {
@@ -45,6 +58,10 @@
   --up: #0ca30c;
   --down: #a30202;
   --flat: #898781;
+
+  /* Interactive state. A deep cyan: far enough from the up-green to be told apart by a
+     reader who cannot separate red from green, and dark enough to pass on white. */
+  --accent: #0e7490;
 
   /* Sequential blue, for magnitude. Steps from the same system's ramp. */
   --seq-1: #cde2fb;
@@ -67,36 +84,52 @@
   :root:where(:not([data-theme="light"])) {
     color-scheme: dark;
 
-    --surface: #1a1a19;
-    --plane: #0d0d0d;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --hairline: rgba(255, 255, 255, 0.1);
+    --surface: #132025;
+    --plane: #0b1418;
+    --ink: #e8f1f2;
+    --ink-2: #b6c6cb;
+    --muted: #8a9ea3;
+    --grid: #1c2b31;
+    --axis: #2a3c43;
+    --hairline: rgba(232, 241, 242, 0.1);
 
-    --down: #f87171;
+    --up: #a3e635;
+    --down: #fb7185;
+    --flat: #8a9ea3;
+    --accent: #7dd3fc;
+
     --code-kw: #c4b5fd;
-    --code-str: #6ee7b7;
+    --code-str: #fdba74;
+    --code-cm: #8a9ea3;
   }
 }
 
+/**
+ * The explicit choice. Deliberately the same values as the block above: this theme is
+ * expressed twice because a media query cannot be shared with a selector, and the two
+ * arms going out of step is the failure mode to watch for. Changing one means changing
+ * both.
+ */
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --surface: #1a1a19;
-  --plane: #0d0d0d;
-  --ink: #ffffff;
-  --ink-2: #c3c2b7;
-  --muted: #898781;
-  --grid: #2c2c2a;
-  --axis: #383835;
-  --hairline: rgba(255, 255, 255, 0.1);
+  --surface: #132025;
+  --plane: #0b1418;
+  --ink: #e8f1f2;
+  --ink-2: #b6c6cb;
+  --muted: #8a9ea3;
+  --grid: #1c2b31;
+  --axis: #2a3c43;
+  --hairline: rgba(232, 241, 242, 0.1);
 
-  --down: #f87171;
+  --up: #a3e635;
+  --down: #fb7185;
+  --flat: #8a9ea3;
+  --accent: #7dd3fc;
+
   --code-kw: #c4b5fd;
-  --code-str: #6ee7b7;
+  --code-str: #fdba74;
+  --code-cm: #8a9ea3;
 }
 
 @theme inline {
@@ -112,6 +145,7 @@
   --color-up: var(--up);
   --color-down: var(--down);
   --color-flat: var(--flat);
+  --color-accent: var(--accent);
 
   --color-code-kw: var(--code-kw);
   --color-code-str: var(--code-str);
