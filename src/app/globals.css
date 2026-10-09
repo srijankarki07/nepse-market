@@ -83,6 +83,22 @@
   --axis: #c3c2b7;
   --hairline: rgba(11, 11, 11, 0.1);
 
+  /* The terminal window's edge, and the reason it is a token rather than `--hairline`.
+
+     A border has one job: separating the card from the page behind it. In the light theme
+     it is the only thing that does, because `--surface` (#fcfcfb) and `--plane` (#f9f9f7)
+     differ by three units per channel and a reader cannot see the boundary without it. In
+     the dark theme `--surface` (#132025) and `--plane` (#0b1418) are far enough apart that
+     the card is obvious on its own, so the border is a second line saying what the fill
+     already says, and it comes off.
+
+     Kept as a border of `transparent` rather than removed, so the box is the same size in
+     both themes and nothing shifts when a reader toggles.
+
+     This is the terminal's decision only. The same argument applies to every other card on
+     the site, and they have not been changed: one component at a time. */
+  --terminal-edge: var(--hairline);
+
   --up: #0ca30c;
   --down: #a30202;
   --flat: #898781;
@@ -132,6 +148,9 @@
     --axis: #2a3c43;
     --hairline: rgba(232, 241, 242, 0.1);
 
+    /* No edge on the terminal in the dark theme. */
+    --terminal-edge: transparent;
+
     --up: #a3e635;
     --down: #fb7185;
     --flat: #8a9ea3;
@@ -167,6 +186,9 @@
   --axis: #2a3c43;
   --hairline: rgba(232, 241, 242, 0.1);
 
+  /* No edge on the terminal in the dark theme. */
+  --terminal-edge: transparent;
+
   --up: #a3e635;
   --down: #fb7185;
   --flat: #8a9ea3;
@@ -192,6 +214,7 @@
   --color-grid: var(--grid);
   --color-axis: var(--axis);
   --color-hairline: var(--hairline);
+  --color-terminal-edge: var(--terminal-edge);
 
   --color-up: var(--up);
   --color-down: var(--down);
@@ -524,6 +547,12 @@ body {
    * It is the same principle as the rest of this block: reduced motion gets the finished
    * state, not a still version of the moving one.
    */
+  /* A pulsing placeholder is still a pulse. It becomes a plain grey box, which says the
+     same thing to a reader who has asked the system to stop things moving. */
+  .animate-pulse {
+    animation: none;
+  }
+
   .terminal-body {
     height: auto;
     overflow: visible;

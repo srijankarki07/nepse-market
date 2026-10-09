@@ -41,7 +41,7 @@ import { Activity, Banknote, Grid, Layers } from "@/components/icons";
 import { IndexChart, IndexTable } from "@/components/index-chart";
 import { MarketTable } from "@/components/market-table";
 import { IndexRail } from "@/components/index-rail";
-import { Segmented, SectionHeading, StatTile, type TrendPoint } from "@/components/ui";
+import { Segmented, SectionHeading, Skeleton, StatTile, type TrendPoint } from "@/components/ui";
 import { count, sessionDate, turnover, volume } from "@/lib/format";
 import { computeMarketIndex } from "@/lib/index-series";
 import { loadMarket, summarise } from "@/lib/market";
@@ -112,8 +112,6 @@ export function MarketView() {
     },
   });
 
-  if (market.isPending) return <Loading />;
-
   if (market.error) {
     return (
       <div role="alert" className="rounded-lg border border-[var(--down)] bg-[var(--surface)] p-5 text-sm">
@@ -123,10 +121,25 @@ export function MarketView() {
     );
   }
 
+  /*
+   * The page draws itself before its data arrives, which it did not use to.
+   *
+   * It returned a skeleton for the whole route, so a reader spent the first moments of the
+   * page looking at a grey rectangle where a headline, an install command and a terminal
+   * belong. Almost nothing here is data: the headline, the standfirst, the section
+   * headings, the card titles, the table's columns and the terminal's chrome are all fixed,
+   * and only the figures inside them wait. So those are drawn immediately and each figure
+   * gets a placeholder in its own place.
+   *
+   * There is a second effect and it is the one that is easy to miss: a layout that reserves
+   * the right space is a layout that does not move when the data lands. The shift Lighthouse
+   * reports here was largely a skeleton of the wrong height being replaced by the real
+   * thing.
+   */
   const data = market.data;
-  const summary = summarise(data.rows);
+  const summary = data === undefined ? null : summarise(data.rows);
 
-  const ranked = {
+  const ranked = data === undefined ? null : {
     // Ranked by percentage, not by the cash move: a 49,000-rupee scrip drifting 2% moves
     // more rupees than a 100-rupee one falling 5%, and ranking by that puts the expensive
     // scrips at the top of a list the reader is using to find today's biggest movers.
@@ -144,10 +157,18 @@ export function MarketView() {
 
   const indexChange = index.data?.changePercent ?? null;
   const points = index.data?.points ?? [];
-  const firstDate = points[0]?.date ?? data.date;
+  const firstDate = points[0]?.date ?? data?.date;
 
   return (
-    <div className="space-y-12">
+    // `aria-busy` for the region, and one status line rather than a live region over the
+    // whole page: the figures arriving one by one are not news, "this is still loading" is.
+    <div className="space-y-12" aria-busy={data === undefined}>
+      {data === undefined && (
+        <p role="status" className="sr-only">
+          Reading the archive
+        </p>
+      )}
+
       <Hero market={data} />
 
       {/* The market pulse. One heading, one control row above what it scopes, one panel. */}
@@ -156,17 +177,19 @@ export function MarketView() {
           eyebrow="Market pulse"
           title="Equal-weighted market index"
           note={
-            index.isPending ? (
+            data === undefined ? (
+              <Skeleton className="h-4 w-64 align-middle" />
+            ) : index.isPending ? (
               "Reading sessions"
             ) : indexChange === null ? (
               "Not enough sessions in this range."
             ) : (
               <>
-                <span className={`font-medium ${indexChange > 0 ? "text-[var(--up)]" : "text-[var(--down)]"}`}>
+                <span className={`font-medium ${indexChange > 0 ? "text-[var(--up-ink)]" : "text-[var(--down-ink)]"}`}>
                   {indexChange > 0 ? "+" : "−"}
                   {Math.abs(indexChange).toFixed(2)}%
                 </span>{" "}
-                over {count(points.length)} sessions, {sessionDate(firstDate)} to{" "}
+                over {count(points.length)} sessions, {sessionDate(firstDate ?? data.date)} to{" "}
                 {sessionDate(data.date)}
               </>
             )
@@ -201,21 +224,27 @@ export function MarketView() {
           </p>
         </div>
 
-        {/* Breadth first, then the session's totals: the shape of the day before its size. */}
+        {/* Breadth first, then the session's totals: the shape of the day before its size.
+            The tiles are drawn either way, so the row is the same height before and after
+            the figures land. */}
         <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          <StatTile label="Advanced" value={count(summary.advancing)} tone="up" />
-          <StatTile label="Declined" value={count(summary.declining)} tone="down" />
-          <StatTile label="Unchanged" value={count(summary.unchanged)} tone="flat" />
-          <StatTile icon={<Grid size={14} />} label="Scrips traded" value={count(summary.scrips)} />
+          <StatTile label="Advanced" value={summary === null ? <Skeleton className="h-6 w-12" /> : count(summary.advancing)} tone="up" />
+          <StatTile label="Declined" value={summary === null ? <Skeleton className="h-6 w-12" /> : count(summary.declining)} tone="down" />
+          <StatTile label="Unchanged" value={summary === null ? <Skeleton className="h-6 w-12" /> : count(summary.unchanged)} tone="flat" />
+          <StatTile
+            icon={<Grid size={14} />}
+            label="Scrips traded"
+            value={summary === null ? <Skeleton className="h-6 w-12" /> : count(summary.scrips)}
+          />
           <StatTile
             icon={<Banknote size={14} />}
             label="Turnover"
-            value={turnover(summary.turnover)}
+            value={summary === null ? <Skeleton className="h-6 w-20" /> : turnover(summary.turnover)}
           />
           <StatTile
             icon={<Activity size={14} />}
             label="Shares traded"
-            value={volume(summary.volume)}
+            value={summary === null ? <Skeleton className="h-6 w-20" /> : volume(summary.volume)}
           />
         </div>
       </section>
@@ -226,7 +255,7 @@ export function MarketView() {
         Rendered only when there is something to render: an archive predating the artifact
         gives an empty array, and an empty rail under a heading is worse than no heading.
       */}
-      {levels.data !== undefined && levels.data.length > 0 && (
+      {(levels.isPending || (levels.data !== undefined && levels.data.length > 0)) && (
         <section className="space-y-5">
           <SectionHeading
             eyebrow="Major indices"
@@ -240,53 +269,68 @@ export function MarketView() {
             }
           />
 
-          <IndexRail levels={levels.data} />
+          {levels.data === undefined ? (
+            <Skeleton className="h-24 w-full rounded-xl" />
+          ) : (
+            <IndexRail levels={levels.data} />
+          )}
         </section>
       )}
 
       {/* Movers first, grouped because they are the same shape and so the same height. */}
       <section className="grid items-start gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <Card title="Top gainers" note="by change %" accent="up">
-          <ScripList rows={ranked.gainers} figure={(row) => <Change row={row} />} />
+          {ranked === null ? <Rows /> : <ScripList rows={ranked.gainers} figure={(row) => <Change row={row} />} />}
         </Card>
 
         <Card title="Top losers" note="by change %" accent="down">
-          <ScripList rows={ranked.losers} figure={(row) => <Change row={row} />} />
+          {ranked === null ? <Rows /> : <ScripList rows={ranked.losers} figure={(row) => <Change row={row} />} />}
         </Card>
 
         <Card title="Most traded" note="by turnover" accent="market">
-          <ScripList rows={ranked.byTurnover} figure={(row) => turnover(row.turnover)} />
+          {ranked === null ? <Rows /> : <ScripList rows={ranked.byTurnover} figure={(row) => turnover(row.turnover)} />}
         </Card>
 
         <Card title="Busiest by volume" note="shares" accent="market">
-          <ScripList rows={ranked.byVolume} figure={(row) => volume(row.volume)} />
+          {ranked === null ? <Rows /> : <ScripList rows={ranked.byVolume} figure={(row) => volume(row.volume)} />}
         </Card>
       </section>
 
       <section className="grid items-start gap-5 lg:grid-cols-3">
-        <Card title="Breadth" note={sessionDate(data.date)} accent="market">
-          <Breadth
-            advancing={summary.advancing}
-            declining={summary.declining}
-            unchanged={summary.unchanged}
-            unknown={summary.unknown}
-          />
+        <Card title="Breadth" note={data === undefined ? " " : sessionDate(data.date)} accent="market">
+          {summary === null ? (
+            <Skeleton className="h-24 w-full rounded-lg" />
+          ) : (
+            <Breadth
+              advancing={summary.advancing}
+              declining={summary.declining}
+              unchanged={summary.unchanged}
+              unknown={summary.unknown}
+            />
+          )}
         </Card>
 
-        <Card title="The day" note={sessionDate(data.date)} accent="neutral">
+        <Card title="The day" note={data === undefined ? " " : sessionDate(data.date)} accent="neutral">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-4">
             {[
-              { label: "Scrips traded", value: count(summary.scrips) },
-              { label: "Turnover", value: turnover(summary.turnover) },
-              { label: "Shares traded", value: volume(summary.volume) },
+              { label: "Scrips traded", value: summary === null ? null : count(summary.scrips) },
+              { label: "Turnover", value: summary === null ? null : turnover(summary.turnover) },
+              { label: "Shares traded", value: summary === null ? null : volume(summary.volume) },
               {
                 label: "Compared with",
-                value: data.previousDate === null ? "Nothing" : sessionDate(data.previousDate),
+                value:
+                  data === undefined
+                    ? null
+                    : data.previousDate === null
+                      ? "Nothing"
+                      : sessionDate(data.previousDate),
               },
             ].map((item) => (
               <div key={item.label}>
                 <dt className="text-xs text-[var(--muted)]">{item.label}</dt>
-                <dd className="tabular mt-0.5 text-lg font-semibold">{item.value}</dd>
+                <dd className="tabular mt-0.5 text-lg font-semibold">
+                  {item.value ?? <Skeleton className="h-5 w-16" />}
+                </dd>
               </div>
             ))}
           </dl>
@@ -294,10 +338,14 @@ export function MarketView() {
 
         <Card
           title="Archive coverage"
-          note={`${count(data.sessionsInArchive)} sessions since 2011`}
+          note={data === undefined ? " " : `${count(data.sessionsInArchive)} sessions since 2011`}
           accent="archive"
         >
-          <CoverageColumns years={data.years} />
+          {data === undefined ? (
+            <Skeleton className="h-32 w-full rounded-lg" />
+          ) : (
+            <CoverageColumns years={data.years} />
+          )}
         </Card>
       </section>
 
@@ -306,7 +354,8 @@ export function MarketView() {
           title="Every listed security"
           note={
             <>
-              {sessionDate(data.date)}.{" "}
+              {data === undefined ? <Skeleton className="h-4 w-20 align-middle" /> : sessionDate(data.date)}
+              {data === undefined ? null : "."}{" "}
               <Link href="/about/" className="underline">
                 About this data
               </Link>
@@ -319,23 +368,28 @@ export function MarketView() {
             </span>
           }
         />
-        <MarketTable rows={data.rows} trends={trends.data} />
+        {data === undefined ? (
+          <Skeleton className="h-[32rem] w-full rounded-xl" />
+        ) : (
+          <MarketTable rows={data.rows} trends={trends.data} />
+        )}
       </section>
     </div>
   );
 }
 
-function Loading() {
+/**
+ * The rows of a top-five list, before the list exists.
+ *
+ * Five, because that is what the real lists hold, and the same height as a scrip row, so
+ * the card is the size it will be.
+ */
+function Rows() {
   return (
-    <div className="space-y-12" aria-busy="true" aria-live="polite">
-      <div className="grid gap-8 lg:grid-cols-2">
-        <div className="space-y-4">
-          <div className="h-12 w-3/4 animate-pulse rounded bg-[var(--grid)]" />
-          <div className="h-24 animate-pulse rounded bg-[var(--grid)]" />
-        </div>
-        <div className="h-64 animate-pulse rounded-xl bg-[var(--grid)]" />
-      </div>
-      <p className="text-sm text-[var(--ink-2)]">Reading the archive</p>
+    <div className="space-y-3">
+      {Array.from({ length: 5 }, (_, index) => (
+        <Skeleton key={index} className="h-9 w-full rounded-md" />
+      ))}
     </div>
   );
 }
