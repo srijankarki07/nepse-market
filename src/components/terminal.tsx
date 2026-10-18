@@ -298,114 +298,118 @@ export function Terminal({
            * because a transcript is ragged and this is standing in for one.
            */
           <div className="space-y-3 px-4 py-4">
-            {["w-3/5", "w-2/5", "w-4/5", "w-1/2", "w-11/12", "w-1/3"].map((width) => (
-              <Skeleton key={width} className={`block h-4 ${width}`} />
-            ))}
+            {["w-3/5", "w-2/5", "w-4/5", "w-1/2", "w-11/12", "w-1/3"].map(
+              (width) => (
+                <Skeleton key={width} className={`block h-4 ${width}`} />
+              ),
+            )}
           </div>
         ) : (
-        <pre className="w-max min-w-full px-4 pt-4 pb-24 font-mono text-[12.5px] leading-relaxed">
-          <code>
-            {timed.map(({ line, start, key }) => {
-              if (line.kind === "blank") {
-                return (
-                  <span
-                    key={key}
-                    ref={(node) => {
-                      lineRefs.current[key] = node;
-                    }}
-                    className="block"
-                  >
-                    {"\n"}
-                  </span>
-                );
-              }
+          <pre className="w-max min-w-full px-4 pt-4 pb-24 font-mono text-[12.5px] leading-relaxed">
+            <code>
+              {timed.map(({ line, start, key }) => {
+                if (line.kind === "blank") {
+                  return (
+                    <span
+                      key={key}
+                      ref={(node) => {
+                        lineRefs.current[key] = node;
+                      }}
+                      className="block"
+                    >
+                      {"\n"}
+                    </span>
+                  );
+                }
 
-              if (line.kind === "command") {
-                return (
-                  <span
-                    key={key}
-                    ref={(node) => {
-                      lineRefs.current[key] = node;
-                    }}
-                    className="block"
-                  >
-                    {/*
+                if (line.kind === "command") {
+                  return (
+                    <span
+                      key={key}
+                      ref={(node) => {
+                        lineRefs.current[key] = node;
+                      }}
+                      className="block"
+                    >
+                      {/*
                       The prompt is revealed with its own command rather than being there
                       from the first paint. It used to be static, so every `$` in the
                       transcript was visible immediately and the window read as a list of
                       finished commands rather than one being typed.
                     */}
-                    <span
-                      aria-hidden="true"
-                      className="terminal-appears text-[var(--muted)] select-none"
-                      style={{ animationDelay: `${start}ms` }}
-                    >
-                      {line.prompt ?? "$"}{" "}
-                    </span>
-                    <span
-                      className="terminal-command"
-                      style={
-                        {
-                          animationDelay: `${start}ms`,
-                          animationDuration: `${typingDuration(line)}ms`,
-                          "--chars": textOf(line.text).length,
-                        } as React.CSSProperties
-                      }
-                    >
-                      {spansOf(line.text).map((span, at) => (
-                        <span
-                          key={at}
-                          className={
-                            span.tone === undefined ? "" : TONE[span.tone]
-                          }
-                        >
-                          {span.text}
-                        </span>
-                      ))}
-                    </span>
-                    {/*
+                      <span
+                        aria-hidden="true"
+                        className="terminal-appears text-[var(--muted)] select-none"
+                        style={{ animationDelay: `${start}ms` }}
+                      >
+                        {line.prompt ?? "$"}{" "}
+                      </span>
+                      <span
+                        className="terminal-command"
+                        style={
+                          {
+                            animationDelay: `${start}ms`,
+                            animationDuration: `${typingDuration(line)}ms`,
+                            "--chars": textOf(line.text).length,
+                          } as React.CSSProperties
+                        }
+                      >
+                        {spansOf(line.text).map((span, at) => (
+                          <span
+                            key={at}
+                            className={
+                              span.tone === undefined ? "" : TONE[span.tone]
+                            }
+                          >
+                            {span.text}
+                          </span>
+                        ))}
+                      </span>
+                      {/*
                       The caret lives for exactly as long as its own command types. It used
                       to blink forever on every command line, so the transcript ended up
                       with a dozen of them going at once.
                     */}
-                    <span
-                      aria-hidden="true"
-                      className="terminal-caret"
-                      style={
-                        {
-                          "--caret-at": `${start}ms`,
-                          "--caret-life": `${typingDuration(line)}ms`,
-                        } as React.CSSProperties
-                      }
-                    >
-                      &nbsp;
+                      <span
+                        aria-hidden="true"
+                        className="terminal-caret"
+                        style={
+                          {
+                            "--caret-at": `${start}ms`,
+                            "--caret-life": `${typingDuration(line)}ms`,
+                          } as React.CSSProperties
+                        }
+                      >
+                        &nbsp;
+                      </span>
                     </span>
+                  );
+                }
+
+                return (
+                  <span
+                    key={key}
+                    ref={(node) => {
+                      lineRefs.current[key] = node;
+                    }}
+                    className="terminal-appears block whitespace-pre"
+                    style={{ animationDelay: `${start}ms` }}
+                  >
+                    {spansOf(line.text).map((span, at) => (
+                      <span
+                        key={at}
+                        className={
+                          span.tone === undefined ? "" : TONE[span.tone]
+                        }
+                      >
+                        {span.text}
+                      </span>
+                    ))}
                   </span>
                 );
-              }
-
-              return (
-                <span
-                  key={key}
-                  ref={(node) => {
-                    lineRefs.current[key] = node;
-                  }}
-                  className="terminal-appears block whitespace-pre"
-                  style={{ animationDelay: `${start}ms` }}
-                >
-                  {spansOf(line.text).map((span, at) => (
-                    <span
-                      key={at}
-                      className={span.tone === undefined ? "" : TONE[span.tone]}
-                    >
-                      {span.text}
-                    </span>
-                  ))}
-                </span>
-              );
-            })}
-          </code>
-        </pre>
+              })}
+            </code>
+          </pre>
         )}
       </div>
 

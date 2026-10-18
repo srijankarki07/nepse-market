@@ -28,9 +28,19 @@
  * A day where **nothing** traded is skipped entirely rather than carried flat: a market
  * that was shut is not a day of zero return, and plotting it as one would draw a false
  * plateau.
+ *
+ * ## A repeated day is not a day either
+ *
+ * When the source serves the previous session's figures under a new date, the archive can
+ * hold two dates with the same closes. That day's ratio would be exactly 1, which plots as
+ * another false plateau and drags the "sessions" count with it. `dropRepeatedCloses`
+ * removes the copy before any arithmetic happens, for the same reason as above: the index
+ * should only move on days the market actually moved.
  */
 
 import type { DatedCloses } from "@srijankarki44/nepse-data";
+
+import { dropRepeatedCloses } from "./repeats";
 
 export interface IndexPoint {
   date: string;
@@ -80,7 +90,11 @@ export function meanRatio(previous: DatedCloses, current: DatedCloses): number |
 
 /** The equal-weighted index across a run of sessions, ascending by date. */
 export function computeMarketIndex(days: readonly DatedCloses[]): MarketIndex {
-  const ordered = [...days].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  // Sorted first, then de-duplicated: `dropRepeatedCloses` compares each day with the last
+  // one it kept, which is only meaningful once the days are in date order.
+  const ordered = dropRepeatedCloses(
+    [...days].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+  );
 
   const first = ordered[0];
   if (first === undefined) return { points: [], changePercent: null };

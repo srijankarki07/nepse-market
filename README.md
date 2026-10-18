@@ -32,7 +32,7 @@ the next deploy. See the note at the top of `src/app/symbol/page.tsx`.
 ```bash
 pnpm install
 pnpm dev          # http://localhost:3000
-pnpm test         # 41 tests, no network
+pnpm test         # all offline, no network
 pnpm build        # static export to out/
 ```
 
@@ -66,6 +66,18 @@ caching.
 Prices are **not adjusted** for bonus shares, rights issues or splits, because the source
 does not adjust them. A long chart therefore shows the nominal price, and a bonus issue
 appears as a sudden fall.
+
+## Closed days and repeated sessions
+
+A day the market did not trade writes no session file. If the archive's newest date is not
+readable yet — usually the few minutes between a commit and the CDN seeing it — or its
+figures are an exact copy of the session before it, the site shows the newest session it can
+verify and says above the market which date was skipped and why. It never fills a missing
+day with the previous day's values or labels one session's prices with another date.
+
+The client asks the origin when the CDN reports a recent session missing, and a missing
+recent session is not cached as a permanent fact. See `src/lib/nepse.ts` and
+`src/lib/market.ts`.
 
 ## Licence
 

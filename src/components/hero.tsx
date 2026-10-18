@@ -23,10 +23,21 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 
-import { Terminal, type TerminalLine, type TerminalSpan } from "@/components/terminal";
+import {
+  Terminal,
+  type TerminalLine,
+  type TerminalSpan,
+} from "@/components/terminal";
 import { ArrowUpRight, Grid, Layers, TrendUp } from "@/components/icons";
 import { Skeleton } from "@/components/ui";
-import { count, percent, price, sessionDate, signed, turnover } from "@/lib/format";
+import {
+  count,
+  percent,
+  price,
+  sessionDate,
+  signed,
+  turnover,
+} from "@/lib/format";
 import type { Market } from "@/lib/market";
 import { useCountUp } from "@/hooks/use-count-up";
 
@@ -52,7 +63,9 @@ const dim = (text: string): TerminalSpan => ({ text, tone: "dim" });
 
 /** Runs of a line, letting the plain stretches be written as plain strings. */
 function code(...parts: readonly (string | TerminalSpan)[]): TerminalSpan[] {
-  return parts.map((part) => (typeof part === "string" ? { text: part } : part));
+  return parts.map((part) =>
+    typeof part === "string" ? { text: part } : part,
+  );
 }
 
 /** `key: value,` with each half in its own colour. `last` drops the trailing comma. */
@@ -88,11 +101,17 @@ function transcriptFor(market: Market): TerminalLine[] {
     market.rows.find((row) => row.symbol === "NABIL") ??
     [...market.rows].sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))[0];
 
-  const totalTurnover = market.rows.reduce((total, row) => total + (row.turnover ?? 0), 0);
+  const totalTurnover = market.rows.reduce(
+    (total, row) => total + (row.turnover ?? 0),
+    0,
+  );
 
   const lines: TerminalLine[] = [
     { kind: "command", text: code(pkg("npm"), dim(" install "), str(PACKAGE)) },
-    { kind: "output", text: code(dim("added "), num("1"), dim(" package, and no market data")) },
+    {
+      kind: "output",
+      text: code(dim("added "), num("1"), dim(" package, and no market data")),
+    },
     { kind: "blank" },
     // `npm` and `node` are `pkg` rather than `fn`: they are the names a reader came here to
     // find, which is what the accent means everywhere else on this site.
@@ -100,7 +119,14 @@ function transcriptFor(market: Market): TerminalLine[] {
     {
       kind: "command",
       prompt: ">",
-      text: code(kw("const"), " market = ", kw("await"), " nepse.", fn("latest"), "()"),
+      text: code(
+        kw("const"),
+        " market = ",
+        kw("await"),
+        " nepse.",
+        fn("latest"),
+        "()",
+      ),
     },
     {
       kind: "output",
@@ -120,7 +146,16 @@ function transcriptFor(market: Market): TerminalLine[] {
       {
         kind: "command",
         prompt: ">",
-        text: code(kw("const"), ` ${local} = `, kw("await"), " nepse.", fn("quote"), "(", str(`"${featured.symbol}"`), ")"),
+        text: code(
+          kw("const"),
+          ` ${local} = `,
+          kw("await"),
+          " nepse.",
+          fn("quote"),
+          "(",
+          str(`"${featured.symbol}"`),
+          ")",
+        ),
       },
       {
         kind: "output",
@@ -142,7 +177,10 @@ function transcriptFor(market: Market): TerminalLine[] {
   lines.push({
     kind: "output",
     text: print([
-      pair("latest", str(`"${market.date}"`)),
+      // The manifest's own answer, which can name a newer date than the one on screen
+      // when the newest session is not readable yet. Printing the shown date here would
+      // make the transcript disagree with the notice above it.
+      pair("latest", str(`"${market.newestDate}"`)),
       pair("sessions", num(count(market.sessionsInArchive)), true),
     ]),
   });
@@ -209,7 +247,10 @@ export function Hero({ market }: { market: Market | undefined }) {
    * memoises its timings on this array, so a new one each render would restart the whole
    * animation every time anything on the page re-rendered, including the two count-ups.
    */
-  const transcript = useMemo(() => (market === undefined ? null : transcriptFor(market)), [market]);
+  const transcript = useMemo(
+    () => (market === undefined ? null : transcriptFor(market)),
+    [market],
+  );
 
   return (
     <section className="hero-wash flex flex-col items-center gap-10">
@@ -226,7 +267,10 @@ export function Hero({ market }: { market: Market | undefined }) {
           is making.
         */}
         <p className="animate-fade inline-flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--surface)] px-3.5 py-1.5 text-[11px] font-medium tracking-wide text-[var(--muted)] uppercase">
-          <span aria-hidden="true" className="size-1.5 rounded-full bg-[var(--up)]" />
+          <span
+            aria-hidden="true"
+            className="size-1.5 rounded-full bg-[var(--up)]"
+          />
           npm · {PACKAGE}
         </p>
 
@@ -251,9 +295,9 @@ export function Hero({ market }: { market: Market | undefined }) {
           ) : (
             count(market.sessionsInArchive)
           )}{" "}
-          sessions of end-of-day prices, every listed scrip, from an archive that rebuilds
-          itself within half an hour of the close. No API key, no server, no rate limit, and
-          no data to keep in sync.
+          sessions of end-of-day prices, every listed scrip, from an archive
+          that rebuilds itself within half an hour of the close. No API key, no
+          server, no rate limit, and no data to keep in sync.
         </p>
 
         <div className="animate-rise flex w-full flex-col items-center gap-3 [animation-delay:120ms]">
@@ -293,23 +337,38 @@ export function Hero({ market }: { market: Market | undefined }) {
             {
               icon: <Grid size={14} />,
               label: "Scrips traded",
-              value: market === undefined ? <Skeleton className="h-8 w-16" /> : count(scrips),
+              value:
+                market === undefined ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  count(scrips)
+                ),
             },
             {
               icon: <TrendUp size={14} />,
               label: "Turnover",
               value:
-                market === undefined ? <Skeleton className="h-8 w-24" /> : turnover(totalTurnover),
+                market === undefined ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  turnover(totalTurnover)
+                ),
             },
             {
               icon: <Layers size={14} />,
               label: "Session",
               value:
-                market === undefined ? <Skeleton className="h-8 w-28" /> : sessionDate(market.date),
+                market === undefined ? (
+                  <Skeleton className="h-8 w-28" />
+                ) : (
+                  sessionDate(market.date)
+                ),
             },
           ].map((stat) => (
             <div key={stat.label}>
-              <dd className="tabular text-2xl font-semibold tracking-tight">{stat.value}</dd>
+              <dd className="tabular text-2xl font-semibold tracking-tight">
+                {stat.value}
+              </dd>
               <dt className="mt-1 flex items-center justify-center gap-1.5 text-xs text-[var(--muted)]">
                 {stat.icon}
                 {stat.label}
