@@ -39,6 +39,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Change, ScripList } from "@/components/cards";
+import { ArchiveErrorPanel, ArchiveNotice } from "@/components/archive-status";
 import { Activity, Layers, TrendDown, TrendUp } from "@/components/icons";
 import { PriceChart, PriceTable, SeriesChange } from "@/components/price-chart";
 import { Avatar, Chip, Segmented, SectionHeading, StatTile } from "@/components/ui";
@@ -58,37 +59,37 @@ export function SymbolView() {
   const symbol = (params.get("t") ?? "").trim().toUpperCase();
   const [rangeKey, setRangeKey] = useState<RangeKey>("1m");
 
-  const quote = useQuery({
-    queryKey: ["quote", symbol],
-    enabled: symbol !== "",
-    queryFn: () => nepse().quote(symbol),
-  });
-
-  // The rail's fuel, and the homepage's query already: the same session file keyed the
-  // same way, so arriving from the market costs no extra request.
+  /*
+   * One market read, not three.
+   *
+   * This page used to call `quote()` for the price, `directory()` for the name and
+   * `loadMarket()` for the rail. All three read the same session files, and only
+   * `loadMarket()` knows which session is safe to show — the newest one the archive names
+   * can be unpublished or repeat the one before it. Deriving the price and the name from
+   * the market read means every figure on the page is anchored to the same date, by
+   * construction rather than by three calls agreeing.
+   */
   const market = useQuery({
     queryKey: ["market"],
     enabled: symbol !== "",
     queryFn: () => loadMarket(nepse()),
   });
 
-  // Separate from the quote because it comes from a different file and is a nicety: a
-  // scrip whose name the archive has never recorded still prices perfectly well.
-  const name = useQuery({
-    queryKey: ["name", symbol],
-    enabled: symbol !== "",
-    queryFn: () => nepse().name(symbol),
-  });
-
-  useScripMetadata(symbol, name.data ?? null);
-
   const range = RANGES.find((entry) => entry.key === rangeKey) ?? RANGES[1];
+  const data = market.data;
+
+  const entry =
+    symbol === "" || data === undefined
+      ? null
+      : (data.rows.find((row) => row.symbol === symbol) ?? null);
+
+  useScripMetadata(symbol, entry?.name ?? null);
 
   const history = useQuery({
-    queryKey: ["history", symbol, rangeKey, quote.data?.date],
-    enabled: symbol !== "" && quote.data !== undefined,
+    queryKey: ["history", symbol, rangeKey, data?.date],
+    enabled: entry !== null,
     queryFn: async () => {
-      const to = quote.data?.date;
+      const to = data?.date;
       if (to === undefined) throw new Error("No session to measure from.");
 
       return nepse().history(symbol, { from: rangeStart(to, range.days), to });
@@ -107,7 +108,7 @@ export function SymbolView() {
     );
   }
 
-  if (quote.isPending) {
+  if (market.isPending) {
     return (
       <div className="space-y-12" aria-busy="true" aria-live="polite">
         <div className="space-y-6">
@@ -125,15 +126,50 @@ export function SymbolView() {
     );
   }
 
-  if (quote.error) {
+  if (market.error) {
     return (
       <div className="space-y-3">
-        <div
-          role="alert"
-          className="rounded-lg border border-[var(--down)] bg-[var(--surface)] p-4 text-sm"
-        >
-          <p className="font-medium">{symbol} could not be priced.</p>
-          <p className="mt-1 text-[var(--ink-2)]">{quote.error.message}</p>
+        <ArchiveErrorPanel
+          error={market.error}
+          onRetry={() => void market.refetch()}
+          busy={market.isFetching}
+        />
+        <Link href="/" className="text-sm underline">
+          Back to the market
+        </Link>
+      </div>
+    );
+  }
+
+  // The query succeeded without an error, so there is a market to read. The guard is for
+  // the type checker rather than for a state the reader can reach.
+  if (data === undefined) {
+    return (
+      <p className="text-sm text-[var(--ink-2)]">
+        The market could not be read.{" "}
+        <Link href="/" className="underline">
+          Back to the market
+        </Link>
+        .
+      </p>
+    );
+  }
+
+  if (entry === null) {
+    return (
+      <div className="space-y-3">
+        {/*
+          The scrip may be absent because the newest archive date was skipped, which is a
+          different explanation from "suspended or delisted" and the one a reader needs.
+        */}
+        <ArchiveNotice notices={data.notices} date={data.date} />
+        <div className="rounded-lg border border-[var(--hairline)] bg-[var(--surface)] p-4 text-sm">
+          <p className="font-medium">
+            {symbol} is not in the {sessionDate(data.date)} session.
+          </p>
+          <p className="mt-1 text-[var(--ink-2)]">
+            It may be suspended, delisted, or misspelt.
+          </p>
         </div>
         <Link href="/" className="text-sm underline">
           Back to the market
@@ -142,19 +178,22 @@ export function SymbolView() {
     );
   }
 
-  const entry = quote.data;
   const points = toSeries(history.data ?? []);
 
-  const others =
-    market.data === undefined
-      ? []
-      : [...market.data.rows]
-          .filter((row) => row.symbol !== entry.symbol)
-          .sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))
-          .slice(0, 5);
+  const others = [...data.rows]
+    .filter((row) => row.symbol !== entry.symbol)
+    .sort((a, b) => (b.turnover ?? 0) - (a.turnover ?? 0))
+    .slice(0, 5);
 
   return (
     <div className="space-y-12">
+      {/*
+        The price below is real, but it is not always the newest date the archive names.
+        Saying which session was skipped keeps a reader from reading the price against the
+        wrong day.
+      */}
+      <ArchiveNotice notices={data.notices} date={data.date} />
+
       <div className="space-y-6">
         <nav className="text-xs text-[var(--muted)]">
           <Link href="/" className="hover:underline">
@@ -169,15 +208,15 @@ export function SymbolView() {
             <Avatar symbol={entry.symbol} size={44} />
             <span className="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
               <span className="font-mono text-base font-semibold">{entry.symbol}</span>
-              {name.data != null && (
-                <span className="text-sm font-normal text-[var(--ink-2)]">{name.data}</span>
+              {entry.name !== null && (
+                <span className="text-sm font-normal text-[var(--ink-2)]">{entry.name}</span>
               )}
             </span>
           </h1>
 
           <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
             <p className="tabular text-4xl font-semibold tracking-tight">
-              {price(entry.quote.close)}
+              {price(entry.close)}
             </p>
             <span className={`tabular text-sm font-medium ${changeColor(entry.change)}`}>
               {signed(entry.change)}
@@ -186,20 +225,20 @@ export function SymbolView() {
           </div>
 
           <p className="mt-2 text-xs text-[var(--muted)]">
-            End of day · {sessionDate(entry.date)} · previous close {price(entry.previousClose)}
+            End of day · {sessionDate(data.date)} · previous close {price(entry.previousClose)}
           </p>
         </section>
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile icon={<Activity size={14} />} label="Open" value={price(entry.quote.open)} />
-        <StatTile icon={<TrendUp size={14} />} label="High" value={price(entry.quote.high)} />
-        <StatTile icon={<TrendDown size={14} />} label="Low" value={price(entry.quote.low)} />
+        <StatTile icon={<Activity size={14} />} label="Open" value={price(entry.open)} />
+        <StatTile icon={<TrendUp size={14} />} label="High" value={price(entry.high)} />
+        <StatTile icon={<TrendDown size={14} />} label="Low" value={price(entry.low)} />
         <StatTile
           icon={<Layers size={14} />}
           label="Volume"
-          value={volume(entry.quote.volume)}
-          note={`${turnover(entry.quote.turnover)} turnover`}
+          value={volume(entry.volume)}
+          note={`${turnover(entry.turnover)} turnover`}
         />
       </section>
 
@@ -249,27 +288,15 @@ export function SymbolView() {
         <SectionHeading
           eyebrow="Same session"
           title="Most traded scrips"
-          note={`The five busiest by turnover on ${sessionDate(entry.date)}, ${entry.symbol} aside.`}
+          note={`The five busiest by turnover on ${sessionDate(data.date)}, ${entry.symbol} aside.`}
         />
 
         <div className="rounded-2xl border border-[var(--hairline)] bg-[var(--surface)] p-5">
-          {market.isPending ? (
-            <div className="space-y-3">
-              {[0, 1, 2, 3, 4].map((row) => (
-                <div key={row} className="h-10 animate-pulse rounded-lg bg-[var(--grid)]" />
-              ))}
-            </div>
-          ) : market.error ? (
-            <p className="py-6 text-center text-sm text-[var(--muted)]">
-              The session could not be read.
-            </p>
-          ) : (
-            <ScripList
-              rows={others}
-              figure={(row) => <Change row={row} />}
-              empty={`No other scrip traded on ${sessionDate(entry.date)}.`}
-            />
-          )}
+          <ScripList
+            rows={others}
+            figure={(row) => <Change row={row} />}
+            empty={`No other scrip traded on ${sessionDate(data.date)}.`}
+          />
         </div>
       </section>
     </div>

@@ -36,6 +36,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Breadth, Card, Change, CoverageColumns, ScripList } from "@/components/cards";
+import { ArchiveErrorPanel, ArchiveNotice } from "@/components/archive-status";
 import { Hero } from "@/components/hero";
 import { Activity, Banknote, Grid, Layers } from "@/components/icons";
 import { IndexChart, IndexTable } from "@/components/index-chart";
@@ -46,6 +47,7 @@ import { count, sessionDate, turnover, volume } from "@/lib/format";
 import { computeMarketIndex } from "@/lib/index-series";
 import { loadMarket, summarise } from "@/lib/market";
 import { nepse, rangeStart } from "@/lib/nepse";
+import { dropRepeatedCloses } from "@/lib/repeats";
 
 /** The index ranges. A year is two closes files, so even the longest is a cheap read. */
 const INDEX_RANGES = [
@@ -99,7 +101,12 @@ export function MarketView() {
 
       // The dates come along, not just the closes: a sparkline a reader can hover needs to
       // say which session a point belongs to, and a bare array of numbers cannot.
-      const days = await nepse().closes({ from: rangeStart(to, TREND_DAYS), to });
+      //
+      // A copied session would draw a flat step in every sparkline at once, so the copies
+      // are dropped before the series are built. The same rule the index chart applies.
+      const days = dropRepeatedCloses(
+        await nepse().closes({ from: rangeStart(to, TREND_DAYS), to }),
+      );
       const series = new Map<string, TrendPoint[]>();
       for (const day of days) {
         for (const [symbol, close] of day.closes) {
@@ -114,10 +121,11 @@ export function MarketView() {
 
   if (market.error) {
     return (
-      <div role="alert" className="rounded-lg border border-[var(--down)] bg-[var(--surface)] p-5 text-sm">
-        <p className="font-medium">The archive could not be read.</p>
-        <p className="mt-1 text-[var(--ink-2)]">{market.error.message}</p>
-      </div>
+      <ArchiveErrorPanel
+        error={market.error}
+        onRetry={() => void market.refetch()}
+        busy={market.isFetching}
+      />
     );
   }
 
@@ -138,6 +146,21 @@ export function MarketView() {
    */
   const data = market.data;
   const summary = data === undefined ? null : summarise(data.rows);
+
+  /*
+   * The exchange's levels are published for the newest session, while the table may have
+   * fallen back a date because that session's file was not readable. Rendering the newer
+   * levels beside the older table would be the mismatch the fallback exists to avoid, so
+   * the grid only shows levels that belong to the session on screen.
+   */
+  const sessionLevels =
+    data === undefined || levels.data === undefined
+      ? undefined
+      : levels.data.filter((level) => level.date === data.date);
+
+  const showLevels =
+    data !== undefined &&
+    (levels.isPending || (sessionLevels !== undefined && sessionLevels.length > 0));
 
   const ranked = data === undefined ? null : {
     // Ranked by percentage, not by the cash move: a 49,000-rupee scrip drifting 2% moves
@@ -170,6 +193,13 @@ export function MarketView() {
       )}
 
       <Hero market={data} />
+
+      {/*
+        The session on screen is the newest one that could be verified, which is not
+        always the one the archive names. A reader is told which date was skipped and why
+        rather than being left to notice that the table looks a day old.
+      */}
+      {data !== undefined && <ArchiveNotice notices={data.notices} date={data.date} />}
 
       {/* The market pulse. One heading, one control row above what it scopes, one panel. */}
       <section className="space-y-5">
@@ -250,12 +280,13 @@ export function MarketView() {
       </section>
 
       {/*
-        The exchange's levels, when the archive publishes them.
+        The exchange's levels, when the archive publishes them for the session shown.
 
         Rendered only when there is something to render: an archive predating the artifact
-        gives an empty array, and an empty grid under a heading is worse than no heading.
+        gives an empty array, and levels from a different session are withheld rather than
+        placed beside a table they do not describe.
       */}
-      {(levels.isPending || (levels.data !== undefined && levels.data.length > 0)) && (
+      {showLevels && (
         <section className="space-y-5">
           <SectionHeading
             eyebrow="Major indices"
@@ -269,10 +300,10 @@ export function MarketView() {
             }
           />
 
-          {levels.data === undefined ? (
+          {sessionLevels === undefined ? (
             <Skeleton className="h-24 w-full rounded-xl" />
           ) : (
-            <IndexGrid levels={levels.data} />
+            <IndexGrid levels={sessionLevels} />
           )}
         </section>
       )}

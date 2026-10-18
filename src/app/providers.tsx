@@ -15,6 +15,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
+import { isRetryableArchiveError } from "@/lib/market";
+
 export function Providers({ children }: { children: ReactNode }) {
   // Created in state rather than at module scope: a module-level client would be shared
   // across requests if this ever ran on a server, which is the classic way a cache leaks
@@ -27,7 +29,12 @@ export function Providers({ children }: { children: ReactNode }) {
             staleTime: 5 * 60 * 1000,
             gcTime: 30 * 60 * 1000,
             refetchOnWindowFocus: false,
-            retry: 2,
+            // The transport already retries a failed request. A retry here is for the case
+            // where the whole read failed after that, and it is wasted on the failures that
+            // are facts about the archive — an empty archive, a malformed file, a date that
+            // did not trade. Those would only teach the reader to press a button that cannot
+            // change the answer.
+            retry: (failureCount, error) => failureCount < 2 && isRetryableArchiveError(error),
           },
         },
       }),

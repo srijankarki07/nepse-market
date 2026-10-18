@@ -108,6 +108,25 @@ describe("computeMarketIndex", () => {
     expect(index.points.at(-1)?.value).toBeCloseTo(105, 4);
   });
 
+  it("skips a session that repeats the previous closes, rather than plotting it flat", () => {
+    // A copied session is a 0% day by construction. It is not a plateau of a real price,
+    // and plotting it would both invent a session and drag every later reading.
+    const index = computeMarketIndex([
+      flat,
+      s("2026-01-02", [["A", 110], ["B", 200]]),
+      s("2026-01-03", [["A", 110], ["B", 200]]),
+      s("2026-01-04", [["A", 121], ["B", 200]]),
+    ]);
+
+    expect(index.points.map((p) => p.date)).toEqual([
+      "2026-01-01",
+      "2026-01-02",
+      "2026-01-04",
+    ]);
+    // 1.05 on the 2nd, then 1.05 again from the 2nd to the 4th.
+    expect(index.points.at(-1)?.value).toBeCloseTo(110.25, 4);
+  });
+
   it("reports no change for a single session", () => {
     // Not zero, there is nothing to have changed from.
     expect(computeMarketIndex([flat]).changePercent).toBeNull();

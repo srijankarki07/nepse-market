@@ -192,6 +192,13 @@ export default function AboutPage() {
           before 2011 is not attempted, and the source&apos;s coverage is patchy in its
           earliest years.
         </p>
+        <p>
+          A closed day is not an error. When the archive&apos;s newest date cannot be read
+          yet, or its figures repeat the session before it exactly, this site shows the
+          newest session it can verify and says above the market which date was skipped and
+          why. It never fills a missing day with the previous day&apos;s values, and it
+          never labels one day&apos;s prices with another day&apos;s date.
+        </p>
       </Section>
 
       <footer className="border-t border-[var(--hairline)] pt-6">
